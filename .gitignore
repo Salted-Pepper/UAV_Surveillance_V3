@@ -1,0 +1,6 @@
+#ignore all log files and produced images
+*.log
+*.png
+*.mp4
+*.grib
+*.nc

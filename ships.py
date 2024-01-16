@@ -2,6 +2,7 @@ from agent import Agent
 import constants
 import model_info
 
+import numpy as np
 import random
 import copy
 from points import Point
@@ -21,8 +22,8 @@ ship_id = 0
 
 
 class Ship(Agent):
-    def __init__(self, base, obstacles: list, color: str):
-        super().__init__(base, obstacles, color)
+    def __init__(self, team: int, base: Harbour, obstacles: list, color: str):
+        super().__init__(team, base, obstacles, color)
 
         global ship_id
         self.ship_id = ship_id
@@ -40,7 +41,11 @@ class Ship(Agent):
 
         self.pheromone_spread = -100
 
+    def __str__(self):
+        return f"Ship {self.ship_id}"
+
     def enter_world(self) -> None:
+        self.stationed = False
         self.enter_world_time = constants.world.world_time
         self.generate_ship_entry_point()
 
@@ -55,6 +60,7 @@ class Ship(Agent):
         self.entry_point = Point(latitude, longitude)
         self.location = copy.deepcopy(self.entry_point)
         logger.debug(f"{self.ship_type} {self.ship_id} enters at {self.entry_point}")
+        self.routing_to_base = True
 
     def enter_dock(self):
         self.routing_to_base = False
@@ -94,22 +100,22 @@ class Ship(Agent):
 
     def sinking(self):
         """
-                Ship sank, remove from world, update statistics.
-                :return:
-                """
+        Ship sank, remove from world, update statistics.
+        Ship automatically gets moved to "destroyed" section in agent Manager
+        :return:
+        """
         print(f"{self.ship_type} {self.ship_id} sunk at ({self.location.x}, {self.location.y}).")
         for uav in self.trailing_agents:
             uav.perceive_ship_sunk()
 
         self.destroyed = True
         self.route = None
-        constants.world.ship_destroyed(self)
         self.remove_from_plot()
 
 
 class Merchant(Ship):
     def __init__(self, model: str, base: Harbour, obstacles: list):
-        super().__init__(base, obstacles, constants.MERCHANT_COLOR)
+        super().__init__(1, base, obstacles, constants.MERCHANT_COLOR)
         self.max_health = constants.MERCHANT_HEALTH
 
         self.base = base
@@ -134,6 +140,11 @@ class Merchant(Ship):
             self.speed = constants.CONTAINER_AVERAGE_SPEED
             self.cargo_load = constants.CONTAINER_AVERAGE_LOAD
             self.RCS = constants.CONTAINER_RCS
+
+    def activate(self):
+        self.stationed = False
+        self.routing_to_base = True
+        self.generate_route(self.entry_point)
 
     def reached_end_of_route(self) -> None:
         self.route = None
@@ -164,12 +175,12 @@ def generate_random_merchant(world) -> Merchant:
                             constants.BULK_DAILY_ARRIVAL_MEAN,
                             constants.CONTAINER_DAILY_ARRIVAL_MEAN])[0]
     base = random.choices(constants.world.docks, weights=[0.4, 0.3, 0.25, 0.05], k=1)[0]
-    return Merchant(model=model, base=base, obstacles=world.polygons)
+    return Merchant(model=model, base=base, obstacles=world.landmasses)
 
 
 class Escort(Ship):
-    def __init__(self, model: str, base: Harbour, obstacles: list, color: str):
-        super().__init__(base, obstacles, color)
+    def __init__(self, team: int, model: str, base: Harbour, obstacles: list, color: str):
+        super().__init__(team, base, obstacles, color)
         self.health = constants.ESCORT_HEALTH
 
         self.model = model
@@ -179,6 +190,8 @@ class Escort(Ship):
         self.max_speed = None
         self.contains_helicopter = None
         self.endurance = None
+
+        self.speed = constants.CRUISING_SPEED
 
         self.guarding_target = None
         self.behaviour = None
@@ -201,6 +214,12 @@ class Escort(Ship):
     def start_guarding(self, unit):
         unit.being_guarded = True
         self.guarding_target = unit
+
+    def generate_patrol_location(self):
+        logger.warning(f"Using default ESCORT class patrol generation - needs to be refined for {self}")
+        x = np.random.choice(np.arange(130, 150, 0.1))
+        y = np.random.choice(np.arange(8, 28, 0.1))
+        return Point(x, y, name=f"Patrol Location {self.ship_id}")
 
     def select_guarding_target(self):
         """
@@ -239,19 +258,40 @@ class Escort(Ship):
 
 class USEscort(Escort):
     def __init__(self, model: str, base: Harbour, obstacles: list):
-        super().__init__(model, base, obstacles, constants.US_ESCORT_COLOR)
+        super().__init__(1, model, base, obstacles, constants.US_ESCORT_COLOR)
 
     def make_move(self):
         """
         Make next move based on behaviour and rules.
         :return:
         """
+        self.distance_to_travel = self.speed * constants.world.time_delta
+
+        if self.routing_to_base or self.routing_to_patrol:
+            self.move_through_route()
+
+        if self.distance_to_travel > 0:
+            self.make_next_patrol_move()
+
+    def observe_area(self):
         pass
+
+    def activate(self):
+        # TODO: Make activation rules based on behaviour setting
+        self.stationed = False
+        self.generate_route(self.generate_patrol_location())
+        self.routing_to_patrol = True
 
 
 class JapanEscort(Escort):
     def __init__(self, model: str, base: Harbour, obstacles: list):
-        super().__init__(model, base, obstacles, constants.JAPAN_ESCORT_COLOR)
+        super().__init__(1, model, base, obstacles, constants.JAPAN_ESCORT_COLOR)
+
+    def activate(self):
+        # TODO: Make activation rules based on behaviour setting
+        self.stationed = False
+        self.generate_route(self.generate_patrol_location())
+        self.routing_to_patrol = True
 
     def make_move(self):
         """
@@ -277,7 +317,13 @@ class JapanEscort(Escort):
 
 class TaiwanEscort(Escort):
     def __init__(self, model: str, base: Harbour, obstacles: list):
-        super().__init__(model, base, obstacles, constants.TAIWAN_ESCORT_COLOR)
+        super().__init__(1, model, base, obstacles, constants.TAIWAN_ESCORT_COLOR)
+
+    def activate(self):
+        # TODO: Make activation rules based on behaviour setting
+        self.stationed = False
+        self.generate_route(self.generate_patrol_location())
+        self.routing_to_patrol = True
 
     def make_move(self):
         """

@@ -21,7 +21,8 @@ logger.setLevel(logging.DEBUG)
 # --------------------------------------------- END LOGGER SET UP ------------------------------------------------
 
 class Polygon:
-    def __init__(self, points: list, color="white"):
+    def __init__(self, points: list, color="white", name=None):
+        self.name = name
         self.points = points
         self.color = color
 
@@ -34,7 +35,7 @@ class Polygon:
     def add_polygon_to_plot(self, axes: matplotlib.axes.Axes, color=None, opacity: float = 1) -> matplotlib.axes.Axes:
         if color is None:
             axes.add_patch(matplotlib.patches.Polygon([(p.x, p.y) for p in self.points],
-                                                      closed=True, alpha=opacity))
+                                                      color=self.color, closed=True, alpha=opacity))
         else:
             axes.add_patch(matplotlib.patches.Polygon([(p.x, p.y) for p in self.points],
                                                       closed=True, color=color, alpha=opacity))

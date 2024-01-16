@@ -72,7 +72,7 @@ class DroneType:
 
 class Drone(Agent):
     def __init__(self, model: str, base: Base, obstacles: list, drone_type: DroneType):
-        super().__init__(base, obstacles, constants.UAV_COLOR)
+        super().__init__(2, base, obstacles, constants.UAV_COLOR)
         global uav_id
         self.uav_id = uav_id
         self.drone_type = drone_type
@@ -153,13 +153,13 @@ class Drone(Agent):
 
         # Case 4: Patrolling an area
         else:
-            self.make_next_patrol_move(distance_to_travel)
+            self.make_next_patrol_move()
 
         # Check if drone is in legal location
         if constants.DEBUG_MODE:
             self.debug()
 
-    def launch(self, to_patrol=True, target=None):
+    def activate(self, to_patrol=True, target=None):
         """
         Launch a drone to either a target or to patrol an area
         :param to_patrol:
@@ -276,7 +276,11 @@ class Drone(Agent):
 
     def observe_area(self) -> None:
         t_0 = time.perf_counter()
-        for ship in constants.world.current_vessels:
+        active_hostile_ships = [agent
+                                for manager in constants.world.managers
+                                for agent in manager.agents
+                                if agent.team != self.team]
+        for ship in active_hostile_ships:
             detection_probabilities = []
 
             radius_travelled = self.radius + self.speed * constants.world.time_delta
@@ -370,4 +374,3 @@ class Drone(Agent):
         self.ammunition = self.max_ammunition
         self.health_points = constants.UAV_HEALTH
         self.time_spent_from_base = 0
-

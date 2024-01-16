@@ -1,14 +1,26 @@
+from agent import Agent
 from ships import TaiwanEscort, Merchant
-from base import Base, Harbour, Airbase
-from drones import Drone
+from base import Harbour, Airbase
+from drones import Drone, DroneType
 
 from points import Point
 
+import model_info
 import numpy as np
 import constants
 
+import os
+import logging
+import datetime
 
-class Manager:
+date = datetime.date.today()
+logging.basicConfig(level=logging.DEBUG, filename=os.path.join(os.getcwd(), 'logs/navy_log_' + str(date) + '.log'),
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt="%H:%M:%S")
+logger = logging.getLogger("MANAGERS")
+logger.setLevel(logging.WARNING)
+
+
+class AgentManager:
     """
     A manager ensures that their designated subset of agents work together as intended.
     This includes ensuring the resources are spread out over time.
@@ -17,6 +29,7 @@ class Manager:
 
     def __init__(self):
         self.agents = []
+        self.destroyed_agents = []
         self.bases = []
 
         self.utilization_rates = {}
@@ -43,9 +56,25 @@ class Manager:
                     (agent_of_model.endurance - (2 * min_time_to_travel + min_time_to_trail)) /
                     (agent_of_model.endurance + agent_of_model.maintenance_time))
 
+    def custom_actions(self):
+        """
+        Module that can be overwritten for subclasses to perform unique actions before managing agents.
+        :return:
+        """
+        pass
+
     def manage_agents(self):
+        self.custom_actions()
+
         for base in self.bases:
             base.serve_agents()
+
+        # Check if the agent has been destroyed
+        active_agents = [agent for agent in self.agents if not agent.stationed]
+        for agent in active_agents:
+            if agent.destroyed:
+                self.agents.remove(agent)
+                self.destroyed_agents.append(agent)
 
         # Check if agent needs to return for resupply
         active_agents = [agent for agent in self.agents if not agent.stationed]
@@ -59,37 +88,102 @@ class Manager:
                 distances_to_bases.append([agent.location.distance_to_point(base.location), base])
 
             distance_to_resupply, base = min(distances_to_bases, key=lambda x: x[0])
-            if agent.remaining_endurance < (distance_to_resupply / agent.speed) * constants.SAFETY_ENDURANCE:
+            remaining_endurance = agent.endurance - agent.time_spent_from_base
+
+            if agent.speed is None:
+                raise ValueError(f"Agent {agent} speed is None")
+            if distance_to_resupply is None:
+                raise ValueError(f"Distance to resupply is {distance_to_resupply}")
+
+            if remaining_endurance < (distance_to_resupply / agent.speed) * constants.SAFETY_ENDURANCE:
                 agent.go_resupply(base)
 
         # Check if utilization is satisfied - if not, send out new agents if feasible
         for model in set([agent.model for agent in self.agents]):
             agents_of_model = [agent for agent in self.agents if agent.model == model]
-            active_agents = [agent for agent in agents_of_model if not agent.docked]
+            active_agents = [agent for agent in agents_of_model if not agent.stationed]
             current_utilization = len(active_agents) / len(agents_of_model)
             available_inactive_agents = [agent for agent in agents_of_model
-                                         if agent.remaining_service_time == 0 and agent.docked]
+                                         if agent.remaining_maintenance_time == 0 and agent.stationed]
 
             # TODO: OPTIONAL See if we can launch more than one per timestep?
             #  - maybe depending on length of timestep?
-            if current_utilization < 1:
-                np.random.choice(available_inactive_agents)
+            while current_utilization < 1 and len(available_inactive_agents) > 0:
+                ready_agent = np.random.choice(available_inactive_agents)
+                ready_agent.activate()
+
+                current_utilization = len(active_agents) / len(agents_of_model)
+                available_inactive_agents = [agent for agent in agents_of_model
+                                             if agent.remaining_maintenance_time == 0 and agent.stationed]
+
+        # Make agent moves
+        for agent in [agent for agent in self.agents if not agent.stationed]:
+            agent.make_move()
 
     def select_random_base(self):
         return np.random.choice(self.bases)
 
 
-class MerchantManager(Manager):
+class UAVManager(AgentManager):
     """
-    Manager for all 'neutral' Merchants
+    Chinese UAV Manager
     """
 
     def __init__(self):
         super().__init__()
 
+        self.drone_types = []
+
         self.initiate_bases()
+        self.initiate_drones()
+
+    def __str__(self):
+        return "UAV Agent Manager"
 
     def initiate_bases(self):
+        self.bases = [Airbase(name="Ningbo", location=Point(121.57, 29.92,
+                                                            force_maintain=True, name="Ningbo")),
+                      Airbase(name="Fuzhou", location=Point(119.31, 26.00,
+                                                            force_maintain=True, name="Fuzhou")),
+                      Airbase(name="Liangcheng", location=Point(116.75, 25.68,
+                                                                force_maintain=True, name="Liangcheng")),
+                      ]
+
+    def initiate_drones(self):
+        # TODO: Distribute drones equally over airbases
+        logger.debug("Initiating Drones...")
+
+        for model in model_info.UAV_MODELS:
+            drone_type = DroneType(model=model['name'],
+                                   amount=np.floor(model['number_of_airframes'] * constants.UAV_AVAILABILITY))
+            self.drone_types.append(drone_type)
+
+            for _ in range(model['number_of_airframes']):
+                new_drone = Drone(model=model['name'], drone_type=drone_type,
+                                  base=np.random.choice(self.bases), obstacles=constants.world.landmasses)
+                self.agents.append(new_drone)
+                drone_type.drones.append(new_drone)
+
+            drone_type.calculate_utilization_rate()
+
+    def launch_drone(self) -> None:
+        for drone_type in self.drone_types:
+            if not drone_type.reached_utilization_rate():
+                drone_type.launch_drone_of_type(self)
+
+
+class MerchantManager(AgentManager):
+    """
+    Manager for all 'neutral' Merchants
+    """
+    def __init__(self):
+        super().__init__()
+        self.initiate_bases()
+
+    def __str__(self):
+        return "Merchant Manager"
+
+    def initiate_bases(self) -> None:
         self.bases = [Harbour(name="Kaohsiung",
                               location=Point(120.30, 22.44, name="Kaohsiung", force_maintain=True),
                               probability=0.4),
@@ -105,19 +199,40 @@ class MerchantManager(Manager):
                       ]
 
     def select_random_base(self) -> Harbour:
-        return np.random.choice(self.bases, p=[base.probability for base in self.bases])
+        if len(self.bases) == 0:
+            raise ValueError("No list of bases available to select from")
+        else:
+            return np.random.choice(self.bases, p=[base.probability if base.probability is not None else 1
+                                                   for base in self.bases])
 
-    def generate_new_merchant(self):
+    def generate_new_merchant(self) -> None:
         model = np.random.choice(a=["Cargo", "Container", "Bulk"],
                                  p=[constants.CARGO_DAILY_ARRIVAL_MEAN,
                                     constants.BULK_DAILY_ARRIVAL_MEAN,
                                     constants.CONTAINER_DAILY_ARRIVAL_MEAN])
         base = self.select_random_base()
-        self.agents.append(Merchant(model, base))
+        new_merchant = Merchant(model, base, obstacles=constants.world.landmasses)
+        self.agents.append(new_merchant)
+        new_merchant.enter_world()
+
+    @staticmethod
+    def calculate_ships_entering() -> int:
+        """
+        Calculate number of ships entering in time period t.
+        :return: Integer number of ships entering
+        """
+        # TODO: Sample from poisson with rate lambda as in overleaf
+        if np.random.rand() > 0.99:
+            return 1
+        else:
+            return 0
+
+    def custom_actions(self) -> None:
+        for _ in range(self.calculate_ships_entering()):
+            self.generate_new_merchant()
 
 
-
-class USManager(Manager):
+class USManager(AgentManager):
     """
     Manager for all US Agents
     """
@@ -128,14 +243,17 @@ class USManager(Manager):
         self.initiate_bases()
         self.initiate_agents()
 
-    def initiate_bases(self):
+    def __str__(self):
+        return "US Agent Manager"
+
+    def initiate_bases(self) -> None:
+        self.bases = [Harbour(name="US Oiler", location=Point(150, 25.88))]
+
+    def initiate_agents(self) -> None:
         pass
 
-    def initiate_agents(self):
-        pass
 
-
-class TaiwanManager(Manager):
+class TaiwanManager(AgentManager):
     """
     Manager for all Taiwanese Agents
     """
@@ -146,17 +264,19 @@ class TaiwanManager(Manager):
         self.initiate_bases()
         self.initiate_agents()
 
-    def initiate_bases(self):
-        pass
+    def __str__(self):
+        return "Taiwan Agent Manager"
 
-    def initiate_agents(self):
-        self.agents = [TaiwanEscort(name="Test Escort",
-                                    model="Zhaotou",
+    def initiate_bases(self) -> None:
+        self.bases = [Harbour(name="Haulien", location=Point(121.67, 23.97, name="Haulien Port"))]
+
+    def initiate_agents(self) -> None:
+        self.agents = [TaiwanEscort(model="Zhaotou",
                                     base=self.select_random_base(),
-                                    obstacles=constants.world.polygons)]
+                                    obstacles=constants.world.landmasses)]
 
 
-class JapanManager(Manager):
+class JapanManager(AgentManager):
     """
     Manager for all Japanese Agents
     """
@@ -167,8 +287,11 @@ class JapanManager(Manager):
         self.initiate_bases()
         self.initiate_agents()
 
-    def initiate_bases(self):
+    def __str__(self):
+        return "Japan Agent Manager"
+
+    def initiate_bases(self) -> None:
         pass
 
-    def initiate_agents(self):
+    def initiate_agents(self) -> None:
         pass

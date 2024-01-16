@@ -20,14 +20,14 @@ logger.setLevel(logging.WARNING)
 
 
 class Agent:
-    def __init__(self, base, obstacles: list, color: str):
+    def __init__(self, team: int, base, obstacles: list, color: str):
         """
         Agents - Either UAVs, Submarines, or a Vessel
         :param base: Where the agent returns when retreating and/or resupplying
         :param obstacles: Areas the agent can not pass through
         :param color: color the agent is plotted as
         """
-
+        self.team = team
         self.model = None
 
         # ----- GEO DATA ON AGENT ------
@@ -98,6 +98,14 @@ class Agent:
         self.past_points.append(self.route.points[0])
         self.next_point = self.route.points[1]
         self.remaining_points = self.route.points[2:]
+
+    def activate(self):
+        """
+        Function to be overwritten on lower level -
+        Activation is what the agent will do once it is entered into the world.
+        :return:
+        """
+        raise NotImplementedError("Function ACTIVATE not defined on AGENT level.")
 
     def update_trail_route(self) -> None:
         """
@@ -175,6 +183,7 @@ class Agent:
 
     def make_move(self):
         self.move()
+        self.update_plot()
 
     def move(self, distance_to_travel=None):
         """
@@ -184,13 +193,15 @@ class Agent:
         """
         raise NotImplementedError("Move functionality not implemented on AGENT level")
 
-    def move_through_route(self, distance_to_travel) -> None:
+    def move_through_route(self, distance_to_travel=None) -> None:
         """
         Move the agent through their current provided route.
         :param distance_to_travel: Distance to travel during this timestep
-        :return:
+        :return: remaining distance to travel
         """
-        self.distance_to_travel = distance_to_travel
+        if distance_to_travel is not None:
+            self.distance_to_travel = distance_to_travel
+
         iterations = 0
         while self.distance_to_travel > 0:
             iterations += 1
@@ -370,7 +381,8 @@ class Agent:
         else:
             raise ValueError(f"Invalid direction {direction}")
 
-    def make_next_patrol_move(self, distance_to_travel: float):
+    def make_next_patrol_move(self):
+        distance_to_travel = self.distance_to_travel
         self.distance_to_travel = 0
 
         if self.direction == "north":
