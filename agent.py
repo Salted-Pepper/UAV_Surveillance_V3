@@ -20,16 +20,15 @@ logger.setLevel(logging.WARNING)
 
 
 class Agent:
-    def __init__(self, name: str, base, obstacles: list, color: str):
+    def __init__(self, base, obstacles: list, color: str):
         """
         Agents - Either UAVs, Submarines, or a Vessel
-        :param name:
         :param base: Where the agent returns when retreating and/or resupplying
         :param obstacles: Areas the agent can not pass through
         :param color: color the agent is plotted as
         """
 
-        self.name = name
+        self.model = None
 
         # ----- GEO DATA ON AGENT ------
         self.base = base
@@ -237,7 +236,7 @@ class Agent:
                     part_of_route = (distance_travelled / distance_to_next_point)
                     new_x = self.location.x + part_of_route * (self.next_point.x - self.location.x)
                     new_y = self.location.y + part_of_route * (self.next_point.y - self.location.y)
-                    self.location = Point(new_x, new_y, name=self.name)
+                    self.location = Point(new_x, new_y, name=str(self))
 
                     if constants.DEBUG_MODE:
                         self.debug()

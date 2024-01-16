@@ -21,14 +21,15 @@ ship_id = 0
 
 
 class Ship(Agent):
-    def __init__(self, name: str, base, obstacles: list, color: str):
-        super().__init__(name, base, obstacles, color)
+    def __init__(self, base, obstacles: list, color: str):
+        super().__init__(base, obstacles, color)
 
         global ship_id
         self.ship_id = ship_id
         ship_id += 1
 
         self.ship_type = None
+        self.RCS = None
 
         # ---- Ship Specific Status -----
         self.entry_point = None
@@ -107,8 +108,8 @@ class Ship(Agent):
 
 
 class Merchant(Ship):
-    def __init__(self, name: str, model: str, base: Harbour, obstacles: list):
-        super().__init__(name, base, obstacles, constants.MERCHANT_COLOR)
+    def __init__(self, model: str, base: Harbour, obstacles: list):
+        super().__init__(base, obstacles, constants.MERCHANT_COLOR)
         self.max_health = constants.MERCHANT_HEALTH
 
         self.base = base
@@ -163,14 +164,15 @@ def generate_random_merchant(world) -> Merchant:
                             constants.BULK_DAILY_ARRIVAL_MEAN,
                             constants.CONTAINER_DAILY_ARRIVAL_MEAN])[0]
     base = random.choices(constants.world.docks, weights=[0.4, 0.3, 0.25, 0.05], k=1)[0]
-    return Merchant(name="merchant", model=model, base=base, obstacles=world.polygons)
+    return Merchant(model=model, base=base, obstacles=world.polygons)
 
 
 class Escort(Ship):
-    def __init__(self, name: str, model: str, base: Harbour, obstacles: list, color: str):
-        super().__init__(name, base, obstacles, color)
+    def __init__(self, model: str, base: Harbour, obstacles: list, color: str):
+        super().__init__(base, obstacles, color)
         self.health = constants.ESCORT_HEALTH
 
+        self.model = model
         self.length = None
         self.displacement = None
         self.armed = None
@@ -181,11 +183,11 @@ class Escort(Ship):
         self.guarding_target = None
         self.behaviour = None
 
-        self.initiate_model(model)
+        self.initiate_model()
 
-    def initiate_model(self, model):
+    def initiate_model(self):
         for blueprint in model_info.ESCORT_MODELS:
-            if blueprint['name'] == model:
+            if blueprint['name'] == self.model:
                 self.length = blueprint['length']
                 self.displacement = blueprint['displacement']
                 self.armed = blueprint['armed']
@@ -236,8 +238,8 @@ class Escort(Ship):
 
 
 class USEscort(Escort):
-    def __init__(self, name: str, model: str, base: Harbour, obstacles: list):
-        super().__init__(name, model, base, obstacles, constants.US_ESCORT_COLOR)
+    def __init__(self, model: str, base: Harbour, obstacles: list):
+        super().__init__(model, base, obstacles, constants.US_ESCORT_COLOR)
 
     def make_move(self):
         """
@@ -248,8 +250,8 @@ class USEscort(Escort):
 
 
 class JapanEscort(Escort):
-    def __init__(self, name: str, model: str, base: Harbour, obstacles: list):
-        super().__init__(name, model, base, obstacles, constants.JAPAN_ESCORT_COLOR)
+    def __init__(self, model: str, base: Harbour, obstacles: list):
+        super().__init__(model, base, obstacles, constants.JAPAN_ESCORT_COLOR)
 
     def make_move(self):
         """
@@ -274,8 +276,8 @@ class JapanEscort(Escort):
 
 
 class TaiwanEscort(Escort):
-    def __init__(self, name: str, model: str, base: Harbour, obstacles: list):
-        super().__init__(name, model, base, obstacles, constants.TAIWAN_ESCORT_COLOR)
+    def __init__(self, model: str, base: Harbour, obstacles: list):
+        super().__init__(model, base, obstacles, constants.TAIWAN_ESCORT_COLOR)
 
     def make_move(self):
         """

@@ -26,8 +26,8 @@ uav_id = 0
 
 
 class DroneType:
-    def __init__(self, name: str, amount: int):
-        self.name = name
+    def __init__(self, model: str, amount: int):
+        self.model = model
         self.total = amount
         self.drones = []
 
@@ -52,7 +52,7 @@ class DroneType:
                     drone_launched = True
                     break
             if not drone_launched:
-                logger.debug(f"No drones of type {self.name} available for launch. Can not satisfy utilization rate")
+                logger.debug(f"No drones of type {self.model} available for launch. Can not satisfy utilization rate")
                 return
 
     def calculate_utilization_rate(self) -> None:
@@ -71,8 +71,8 @@ class DroneType:
 
 
 class Drone(Agent):
-    def __init__(self, name: str, model: str, base: Base, obstacles: list, drone_type: DroneType):
-        super().__init__(name, base, obstacles, constants.UAV_COLOR)
+    def __init__(self, model: str, base: Base, obstacles: list, drone_type: DroneType):
+        super().__init__(base, obstacles, constants.UAV_COLOR)
         global uav_id
         self.uav_id = uav_id
         self.drone_type = drone_type
@@ -84,7 +84,8 @@ class Drone(Agent):
 
         self.pheromone_spread = 100
 
-        self.make(model=model)
+        self.model = model
+        self.initiate_model()
 
     def calculate_maintenance_time(self) -> None:
         """
@@ -196,10 +197,10 @@ class Drone(Agent):
         self.time_spent_from_base = 0
         self.start_maintenance()
 
-    def make(self, model: str) -> None:
-        logger.debug(f"Initiating drone of type {model}.")
+    def initiate_model(self) -> None:
+        logger.debug(f"Initiating drone of type {self.model}.")
         for blueprint in model_info.UAV_MODELS:
-            if blueprint['name'] == model:
+            if blueprint['name'] == self.model:
                 self.speed = blueprint['speed']
                 self.vulnerability = blueprint['vulnerability']
                 self.ability_to_target = blueprint['ability_to_target']

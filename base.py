@@ -35,7 +35,7 @@ class Base:
         self.currently_served_agent.complete_maintenance()
         self.start_serve_next_agent()
 
-    def serve_agent(self):
+    def serve_agents(self):
         remaining_time = constants.world.time_delta
         while remaining_time > 0:
             if self.currently_served_agent is not None:
@@ -65,6 +65,6 @@ class Airbase(Base):
 
 
 class Harbour(Base):
-    def __init__(self, name: str, location: Point):
+    def __init__(self, name: str, location: Point, probability=None):
         super().__init__(name, location)
-
+        self.probability = probability

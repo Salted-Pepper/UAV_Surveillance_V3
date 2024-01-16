@@ -27,7 +27,7 @@ from polygons import Polygon
 from receptors import ReceptorGrid
 from ships import Ship, Merchant, generate_random_merchant
 from base import Harbour, Airbase
-from managers import
+from managers import USManager, TaiwanManager, JapanManager
 
 date = datetime.date.today()
 
@@ -144,9 +144,9 @@ class World:
         self.receptor_grid = ReceptorGrid(self.polygons + [self.china_polygon.polygon], self)
 
     def initiate_escort_management(self) -> None:
-        self.escort_management = [EscortManagement(self, country="US"),
-                                  EscortManagement(self, country="Taiwan"),
-                                  EscortManagement(self, country="Japan"),
+        self.escort_management = [USManager(),
+                                  TaiwanManager(),
+                                  JapanManager(),
                                   ]
 
     def initiate_docks(self) -> None:
@@ -173,7 +173,7 @@ class World:
         logger.debug("Initiating Drones...")
 
         for model in model_info.UAV_MODELS:
-            drone_type = DroneType(name=model['name'],
+            drone_type = DroneType(model=model['name'],
                                    amount=np.floor(model['number_of_airframes'] * constants.UAV_AVAILABILITY))
             self.drone_types.append(drone_type)
 
