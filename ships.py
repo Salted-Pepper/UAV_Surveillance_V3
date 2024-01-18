@@ -43,7 +43,7 @@ class Ship(Agent):
         self.pheromone_spread = 100
 
     def __str__(self):
-        return f"S {self.ship_id}"
+        return f"s {self.ship_id}"
 
     def enter_world(self) -> None:
         self.stationed = False
@@ -239,7 +239,7 @@ def generate_random_merchant() -> Merchant:
 class Escort(Ship):
     def __init__(self, team: int, model: str, base: Harbour, obstacles: list, color: str):
         super().__init__(team, base, obstacles, color)
-        self.health = constants.ESCORT_HEALTH
+        self.health_points = constants.ESCORT_HEALTH
 
         self.model = model
         self.RCS = 3  # TODO: Implement proper RCS for escorts
@@ -435,6 +435,16 @@ class TaiwanEscort(Escort):
 
         self.pheromone_type = "Alpha"
 
+    def __str__(self):
+        if self.patrolling:
+            return f"s{self.ship_id}p"
+        elif self.guarding_target is not None:
+            return f"s{self.ship_id}g"
+        elif self.routing_to_base:
+            return f"s{self.ship_id}r"
+        else:
+            return f"s{self.ship_id}"
+
     def make_move(self):
         """
         Make next move based on behaviour and rules.
@@ -448,7 +458,6 @@ class TaiwanEscort(Escort):
         if distance_to_travel is not None:
             self.distance_to_travel = distance_to_travel
 
-        print(f"Moving {self}: {self.distance_to_travel}, {self.trailing}, {self.behaviour}, {self.routing_to_patrol}")
         while self.distance_to_travel > 0:
             if self.trailing:
                 if self.is_near(self.located_agent.location):

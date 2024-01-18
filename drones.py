@@ -77,7 +77,14 @@ class Drone(Agent):
         self.initiate_model()
 
     def __str__(self):
-        return f"U {self.uav_id}"
+        if self.patrolling:
+            return f"u{self.uav_id}p"
+        elif self.routing_to_base:
+            return f"u{self.uav_id}r"
+        elif self.trailing:
+            return f"u{self.uav_id}t"
+        else:
+            return f"u{self.uav_id}"
 
     def calculate_maintenance_time(self) -> None:
         """

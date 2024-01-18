@@ -40,7 +40,7 @@ class Receptor:
             self.beta_pheromones = 100
             self.decay = False
         else:
-            self.beta_pheromones = 100
+            self.alpha_pheromones = np.random.uniform(0, 0.1)
             self.beta_pheromones = np.random.uniform(0, 0.1)
             self.decay = True
 
