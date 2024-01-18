@@ -66,6 +66,7 @@ class Drone(Agent):
         self.drone_type = drone_type
         uav_id += 1
 
+        self.RCS = 0
         self.vulnerability = None
         self.ability_to_target = None
         self.range = None
@@ -259,12 +260,12 @@ class Drone(Agent):
             NotImplementedError("Exception - reached end of route, but not trailing, patrolling, or landing.")
 
     @staticmethod
-    def roll_detection_check(uav_location, ship: Ship, distance: float = None) -> float:
+    def roll_detection_check(uav_location, agent: Agent, distance: float = None) -> float:
         if distance is None:
-            distance = calculate_distance(a=uav_location, b=ship.location)
+            distance = calculate_distance(a=uav_location, b=agent.location)
 
         # Get weather conditions in area
-        closest_receptor = constants.world.receptor_grid.get_closest_receptor(ship.location)
+        closest_receptor = constants.world.receptor_grid.get_closest_receptor(agent.location)
         sea_state = closest_receptor.sea_state
         sea_state_to_parameter = {0: 0.89,
                                   1: 0.89,
@@ -280,7 +281,8 @@ class Drone(Agent):
             weather = 0.40
 
         height = 10  # Assumed to be 10km
-        top_frac_exp = constants.K_CONSTANT * height * ship.RCS * weather
+        print(f"{agent=}, {height=}, {agent.RCS=}, {weather=}")
+        top_frac_exp = constants.K_CONSTANT * height * agent.RCS * weather
         if distance < 1:
             distance = 1
         delta = 1 - math.exp(-top_frac_exp / (distance ** 3))

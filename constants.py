@@ -56,6 +56,20 @@ hunter_behaviour = "respect_exclusion"  # ["respect_exclusion", "cross_if_pursui
 # cross_if_pursuit: Hunters cross exclusion zone if in pursuit of merchant and NO ESCORT is present
 # free_hunt: Hunters hunt in exclusion zone (accepting casualties from escorts, aircraft, attack helicopters, or CDCMs)
 
+# GENERAL ESCORT BEHAVIOUR PARAMETERS
+taiwan_escort_behaviour = {"patrol": 0.5,
+                           "hunt": 0,
+                           "guard": 0.5
+                           }
+us_escort_behaviour = {"patrol": 1/3,
+                       "hunt": 1/3,
+                       "guard": 1/3
+                       }
+japan_escort_behaviour = {"patrol": 0.4,
+                          "hunt": 0.2,
+                          "guard": 0.4
+                          }
+
 # TAIWAN ESCORT RULES
 # TODO: Implement
 taiwan_engagement = "attack_all"  # ["engaged_only", "attack_all"] -
@@ -83,7 +97,7 @@ PATROL_MAX_LAT = 150
 PATROL_MIN_LONG = 10
 PATROL_MAX_LONG = 40
 
-UAV_AVAILABILITY = 0.1
+UAV_AVAILABILITY = 0.3
 
 # ---- Detection Parameters ----
 UAV_MOVEMENT_SPLITS_P_H = 24  # (24 is at least 2 every 5 mins) Splits per hour - gets recalculated per timedelta
@@ -119,7 +133,7 @@ CONTAINER_RCS = 1.5
 CRUISING_SPEED = 12 * 1.852
 
 ESCORT_MAINTENANCE_TIME = 6  # Time for escorts to refuel/resupply
-MERCHANT_MAINTENANCE_TIME = 3*24  # Time for merchants to return overseas
+MERCHANT_MAINTENANCE_TIME = 3 * 24  # Time for merchants to return overseas
 
 # ---- Plotting Constants -----
 WORLD_MARKER_SIZE = 7

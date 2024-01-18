@@ -38,6 +38,7 @@ class Agent:
         # ----- PROPERTIES OF AGENT ------
         self.location = base.location
 
+        self.RCS = None
         self.speed = None
         self.radius = None
         self.max_health = None
@@ -46,6 +47,8 @@ class Agent:
         self.max_ammunition = None
         self.ammunition = None
         self.endurance = None
+
+        self.pheromone_type = None
 
         # ----- STATE OF AGENT -----
         self.distance_to_travel = 0
@@ -65,6 +68,7 @@ class Agent:
         self.located_agent = None
         self.detected = False
         self.trailing_agents = []
+        self.guarding_agents = []
         self.awaiting_support = False
         self.support_object = None
 
@@ -96,7 +100,7 @@ class Agent:
         self.route = create_route(point_a=self.location, point_b=destination,
                                   polygons_to_avoid=copy.deepcopy(self.obstacles))
         self.past_points.append(self.route.points[0])
-        # self.last_location = self.route.points[0]
+        self.last_location = self.location
         self.next_point = self.route.points[1]
         self.remaining_points = self.route.points[2:]
 
@@ -178,6 +182,10 @@ class Agent:
         for agent in self.trailing_agents:
             agent.stop_trailing(reason)
 
+    def remove_guarding_agents(self, ) -> None:
+        for agent in self.guarding_agents:
+            agent.stop_guarding()
+
     def reached_end_of_route(self) -> None:
         """
         Set of instructions to follow once the end of agent route is reached.
@@ -205,7 +213,6 @@ class Agent:
         :param distance_to_travel: Distance to travel during this timestep
         :return: remaining distance to travel
         """
-        logger.debug(f"{self} routing through {[str(p) for p in self.route.points]}")
         if distance_to_travel is not None:
             self.distance_to_travel = distance_to_travel
 
@@ -390,6 +397,7 @@ class Agent:
             raise ValueError(f"Invalid direction {direction}")
 
     def make_next_patrol_move(self):
+        self.last_location = self.location
         distance_to_travel = self.distance_to_travel
         self.distance_to_travel = 0
 
@@ -497,8 +505,12 @@ class Agent:
 
             for receptor in receptors:
                 if receptor.decay:  # To Check if receptor is not a boundary point
-                    receptor.uav_pheromones += ((1 / max(location.distance_to_point(receptor.location), 0.1)) *
-                                                (self.pheromone_spread / constants.world.splits_per_step))
+                    if self.pheromone_type == "alpha":
+                        receptor.alpha_pheromones += ((1 / max(location.distance_to_point(receptor.location), 0.1)) *
+                                                      (self.pheromone_spread / constants.world.splits_per_step))
+                    elif self.pheromone_type == "beta":
+                        receptor.beta_pheromones += ((1 / max(location.distance_to_point(receptor.location), 0.1)) *
+                                                     (self.pheromone_spread / constants.world.splits_per_step))
                     # receptor.update_plot(self.world.ax, self.world.receptor_grid.cmap)
 
     def engage_agent(self):

@@ -32,13 +32,16 @@ class Receptor:
         #  - also finetune value
 
         if in_polygon:
-            self.uav_pheromones = 100
+            self.alpha_pheromones = 100
+            self.beta_pheromones = 100
             self.decay = False
         elif not is_in_area_of_interest(Point(x, y)):
-            self.uav_pheromones = 100
+            self.alpha_pheromones = 100
+            self.beta_pheromones = 100
             self.decay = False
         else:
-            self.uav_pheromones = np.random.uniform(0, 0.1)
+            self.beta_pheromones = 100
+            self.beta_pheromones = np.random.uniform(0, 0.1)
             self.decay = True
 
         # Sea State Variables
@@ -52,24 +55,37 @@ class Receptor:
         self.patch = None
 
     def __str__(self):
-        return f"Receptor at: {self.location} - with pheromones {self.uav_pheromones}"
+        return (f"Receptor at: {self.location} - with alpha: {self.alpha_pheromones}, beta: {self.beta_pheromones},"
+                f"sea state: {self.sea_state}")
 
     def initiate_plot(self, axes, cmap):
         if not constants.PLOTTING_MODE:
             return axes
 
-        self.patch = matplotlib.patches.Circle((self.location.x, self.location.y),
-                                               radius=0.05, color=cmap(self.uav_pheromones / 100),
-                                               alpha=0.5, linewidth=None)
+        if constants.RECEPTOR_PLOT_PARAMETER == "alpha_pheromones":
+            self.patch = matplotlib.patches.Circle((self.location.x, self.location.y),
+                                                   radius=0.05, color=cmap(self.alpha_pheromones / 100),
+                                                   alpha=0.5, linewidth=None)
+        elif constants.RECEPTOR_PLOT_PARAMETER == "beta_pheromones":
+            self.patch = matplotlib.patches.Circle((self.location.x, self.location.y),
+                                                   radius=0.05, color=cmap(self.beta_pheromones / 100),
+                                                   alpha=0.5, linewidth=None)
+        elif constants.RECEPTOR_PLOT_PARAMETER == "sea_states":
+            self.patch = matplotlib.patches.Circle((self.location.x, self.location.y),
+                                                   radius=0.05, color=cmap(self.sea_state / 6),
+                                                   alpha=0.5, linewidth=None)
         axes.add_patch(self.patch)
         return axes
 
     def update_plot(self, axes, cmap):
         if not constants.PLOTTING_MODE:
             return
-        if constants.RECEPTOR_PLOT_PARAMETER == "pheromones":
-            self.patch.set_facecolor(cmap(self.uav_pheromones / 100))
-            self.patch.set_edgecolor(cmap(self.uav_pheromones / 100))
+        if constants.RECEPTOR_PLOT_PARAMETER == "alpha_pheromones":
+            self.patch.set_facecolor(cmap(self.alpha_pheromones / 100))
+            self.patch.set_edgecolor(cmap(self.alpha_pheromones / 100))
+        elif constants.RECEPTOR_PLOT_PARAMETER == "beta_pheromones":
+            self.patch.set_facecolor(cmap(self.beta_pheromones / 100))
+            self.patch.set_edgecolor(cmap(self.beta_pheromones / 100))
         elif constants.RECEPTOR_PLOT_PARAMETER == "sea_states":
             self.patch.set_facecolor(cmap(self.sea_state / 6))
             self.patch.set_edgecolor(cmap(self.sea_state / 6))
@@ -218,7 +234,7 @@ class ReceptorGrid:
 
         radius = max(h_space_between_receptors, v_space_between_receptors)
 
-        potential_receptors = self.select_receptors_in_radius(point, radius*constants.LATITUDE_CONVERSION_FACTOR)
+        potential_receptors = self.select_receptors_in_radius(point, radius * constants.LATITUDE_CONVERSION_FACTOR)
         dist = math.inf
 
         selected_receptor = None
@@ -243,15 +259,19 @@ class ReceptorGrid:
     def depreciate_pheromones(self):
         for receptor in self.receptors:
             if receptor.decay:
-                receptor.uav_pheromones = (receptor.uav_pheromones *
-                                           constants.PHEROMONE_DEPRECIATION_FACTOR_PER_TIME_DELTA
-                                           ** (1 / self.world.time_delta))
+                receptor.alpha_pheromones = (receptor.alpha_pheromones *
+                                             constants.PHEROMONE_DEPRECIATION_FACTOR_PER_TIME_DELTA
+                                             ** (1 / self.world.time_delta))
+                receptor.beta_pheromones = (receptor.beta_pheromones *
+                                            constants.PHEROMONE_DEPRECIATION_FACTOR_PER_TIME_DELTA
+                                            ** (1 / self.world.time_delta))
 
-    def calculate_CoP(self, point: Point, radius: float) -> (float, list):
+    def calculate_CoP(self, point: Point, radius: float, pheromone_type="beta") -> (float, list):
         """
         Calculates the concentration of pheromones
         :param point:
         :param radius:
+        :param pheromone_type: Type of pheromone (Taiwan is alpha pheromones, China is beta pheromones)
         :return:
         """
         # Increase radius of receptors selected by a factor 2 to make more future-proof decisions
@@ -265,8 +285,12 @@ class ReceptorGrid:
                 return math.inf, receptors
 
         CoP = 0
-        for receptor in receptors:
-            CoP += (1 / max(0.1, calculate_distance(a=point, b=receptor.location))) * receptor.uav_pheromones
+        if pheromone_type == "alpha":
+            for receptor in receptors:
+                CoP += (1 / max(0.1, calculate_distance(a=point, b=receptor.location))) * receptor.alpha_pheromones
+        elif pheromone_type == "beta":
+            for receptor in receptors:
+                CoP += (1 / max(0.1, calculate_distance(a=point, b=receptor.location))) * receptor.beta_pheromones
         # logger.debug(f"Calculated CoP at {point} with rad {radius}: {CoP} - from {len(receptors)} receptors.")
         return CoP, receptors
 

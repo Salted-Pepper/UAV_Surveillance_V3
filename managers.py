@@ -117,12 +117,9 @@ class AgentManager:
             # TODO: OPTIONAL See if we can launch more than one per timestep?
             #  - maybe depending on length of timestep?
             while current_utilization < self.utilization_rates[model] and len(available_inactive_agents) > 0:
-                ready_agent = np.random.choice(available_inactive_agents)
+                ready_agent = available_inactive_agents.pop(0)
                 ready_agent.activate()
 
-                available_inactive_agents = [agent for agent in agents_of_model
-                                             if agent.remaining_maintenance_time == 0
-                                             and agent.stationed]
                 current_utilization = (len(agents_of_model) - len(available_inactive_agents)) / len(agents_of_model)
 
         # Make agent moves
@@ -230,7 +227,7 @@ class MerchantManager(AgentManager):
         :return: Integer number of ships entering
         """
         # TODO: Sample from poisson with rate lambda as in overleaf
-        if np.random.rand() > 0.98:
+        if np.random.rand() > 0.99:
             return 1
         else:
             return 0
@@ -306,7 +303,47 @@ class TaiwanManager(AgentManager):
     def initiate_agents(self) -> None:
         self.agents = [TaiwanEscort(model="Zhaotou",
                                     base=self.select_random_base(),
-                                    obstacles=constants.world.landmasses)]
+                                    obstacles=constants.world.landmasses),
+                       TaiwanEscort(model="Zhaotou",
+                                    base=self.select_random_base(),
+                                    obstacles=constants.world.landmasses),
+                       TaiwanEscort(model="Zhaotou",
+                                    base=self.select_random_base(),
+                                    obstacles=constants.world.landmasses),
+                       TaiwanEscort(model="Zhaotou",
+                                    base=self.select_random_base(),
+                                    obstacles=constants.world.landmasses),
+                       TaiwanEscort(model="Zhaotou",
+                                    base=self.select_random_base(),
+                                    obstacles=constants.world.landmasses),
+                       TaiwanEscort(model="Zhaotou",
+                                    base=self.select_random_base(),
+                                    obstacles=constants.world.landmasses),
+                       TaiwanEscort(model="Zhaotou",
+                                    base=self.select_random_base(),
+                                    obstacles=constants.world.landmasses),
+                       TaiwanEscort(model="Zhaotou",
+                                    base=self.select_random_base(),
+                                    obstacles=constants.world.landmasses),
+                       TaiwanEscort(model="Zhaotou",
+                                    base=self.select_random_base(),
+                                    obstacles=constants.world.landmasses),
+                       TaiwanEscort(model="Zhaotou",
+                                    base=self.select_random_base(),
+                                    obstacles=constants.world.landmasses),
+                       TaiwanEscort(model="Zhaotou",
+                                    base=self.select_random_base(),
+                                    obstacles=constants.world.landmasses),
+                       TaiwanEscort(model="Zhaotou",
+                                    base=self.select_random_base(),
+                                    obstacles=constants.world.landmasses),
+                       TaiwanEscort(model="Zhaotou",
+                                    base=self.select_random_base(),
+                                    obstacles=constants.world.landmasses),
+                       TaiwanEscort(model="Zhaotou",
+                                    base=self.select_random_base(),
+                                    obstacles=constants.world.landmasses),
+                       ]
 
 
 class JapanManager(AgentManager):

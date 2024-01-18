@@ -215,7 +215,7 @@ if __name__ == "__main__":
     t_0 = time.perf_counter()
     world = World(time_delta=0.2)
 
-    for z in range(10000):
+    for z in range(100):
         world.time_step()
 
     t_1 = time.perf_counter()

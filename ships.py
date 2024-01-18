@@ -5,8 +5,10 @@ import model_info
 import numpy as np
 import random
 import copy
+
 from points import Point
 from base import Harbour
+from general_maths import calculate_distance
 
 import os
 import logging
@@ -30,7 +32,6 @@ class Ship(Agent):
         ship_id += 1
 
         self.ship_type = None
-        self.RCS = None
 
         # ---- Ship Specific Status -----
         self.entry_point = None
@@ -39,7 +40,7 @@ class Ship(Agent):
         self.CTL = False
         self.damage_penalty = 0
 
-        self.pheromone_spread = -100
+        self.pheromone_spread = 100
 
     def __str__(self):
         return f"S {self.ship_id}"
@@ -64,6 +65,8 @@ class Ship(Agent):
         self.routing_to_base = True
 
     def enter_dock(self):
+        self.remove_trailing_agents("Merchant reached safe dock")
+        self.remove_guarding_agents()
         logger.debug(f"{self} reached dock")
         self.routing_to_base = False
         self.stationed = True
@@ -162,7 +165,7 @@ class Merchant(Ship):
         logger.debug(f"{self} finished maintenance.")
         self.health_points = self.max_health
         self.ammunition = self.max_ammunition
-        self.stationed = False
+        self.activate()
 
     def receive_damage(self, damage: int) -> None:
         """
@@ -213,15 +216,15 @@ class Merchant(Ship):
         Not provided on Agent level
         :return:
         """
+        self.distance_to_travel = 0
         self.route = None
-        self.remove_from_plot()
 
         if self.leaving_world:
             self.stationed = True
             self.remove_trailing_agents("Merchant left world")
         elif self.routing_to_base:
             self.enter_dock()
-            self.remove_trailing_agents("Merchant reached safe dock")
+        self.remove_from_plot()
 
 
 def generate_random_merchant() -> Merchant:
@@ -239,13 +242,15 @@ class Escort(Ship):
         self.health = constants.ESCORT_HEALTH
 
         self.model = model
+        self.RCS = 3  # TODO: Implement proper RCS for escorts
+        self.radius = 10  # TODO: Implement proper search radius for escorts
         self.length = None
         self.displacement = None
         self.armed = None
         self.max_speed = None
         self.contains_helicopter = None
         # TODO: Implement Individual maint time for Escorts
-        self.maintenance_time = 24
+        self.maintenance_time = constants.ESCORT_MAINTENANCE_TIME
 
         self.speed = constants.CRUISING_SPEED
 
@@ -267,9 +272,50 @@ class Escort(Ship):
     def make_move(self):
         raise NotImplementedError(f"Behaviour {self.behaviour} not implemented for baseclass ESCORT.")
 
-    def start_guarding(self, unit):
-        unit.being_guarded = True
-        self.guarding_target = unit
+    def start_guarding(self, agent):
+        agent.guarding_agents.append(self)
+        self.guarding_target = agent
+        self.generate_route(self.guarding_target.location)
+
+    def stop_guarding(self):
+        self.guarding_target = None
+
+    def activate(self):
+
+        self.stationed = False
+
+        # TODO: determine how to set behaviour mode - for now sample random one
+        behaviours = constants.taiwan_escort_behaviour
+        self.behaviour = random.choices(list(behaviours.keys()),
+                                        [behaviours[behaviour]
+                                         for behaviour in behaviours.keys()]
+                                        )[0]
+
+        if self.behaviour == "patrol":
+            self.generate_route(self.generate_patrol_location())
+            self.routing_to_patrol = True
+        elif self.behaviour == "guard":
+            found_target = self.select_guarding_target()
+            if not found_target:
+                self.patrolling = True
+        # TODO: Make activation rules based on hunting behaviour
+
+    def reached_end_of_route(self) -> None:
+        self.distance_to_travel = 0
+        self.route = None
+
+        if self.routing_to_base:
+            self.enter_dock()
+            for agent in self.trailing_agents:
+                agent.stop_trailing("Escort Target has reached a Port")
+        elif self.routing_to_patrol:
+            self.patrolling = True
+            self.make_next_patrol_move()
+        elif self.guarding_target is not None:
+            self.distance_to_travel = 0
+            self.observe_area()
+        else:
+            raise ValueError("Escort reached end of unexpected route.")
 
     def generate_patrol_location(self):
         logger.warning(f"Using default ESCORT class patrol generation - needs to be refined for {self}")
@@ -279,12 +325,12 @@ class Escort(Ship):
 
     def select_guarding_target(self):
         """
-                Task the escort to find a target to guard. Returns True if a successful target is established,
-                False otherwise.
-                :return:
-                """
+        Task the escort to find a target to guard. Returns True if a successful target is established,
+        False otherwise.
+        :return:
+        """
         merchants = [vessel for vessel in constants.world.current_vessels
-                     if vessel.ship_type == "Merchant" and not vessel.being_guarded]
+                     if vessel.ship_type == "Merchant" and not len(vessel.guarding_agents) == 0]
 
         # TODO: refine how a target is selected - for now just closest unguarded merchant
         if len(merchants) == 0:
@@ -295,21 +341,45 @@ class Escort(Ship):
         self.start_guarding(merchant)
         return True
 
-    def reached_end_of_route(self) -> None:
-        self.route = None
+    def observe_area(self) -> None:
+        active_hostile_agents = [agent
+                                 for manager in constants.world.managers
+                                 for agent in manager.agents
+                                 if agent.team != self.team]
+        for agent in active_hostile_agents:
+            detection_probabilities = []
 
-        if self.routing_to_base:
-            self.enter_dock()
-            for agent in self.trailing_agents:
-                agent.stop_trailing("Escort Target has reached a Port")
-        elif self.routing_to_patrol:
-            pass
-        else:
-            raise ValueError("Escort reached end of unexpected route.")
+            radius_travelled = self.radius + self.speed * constants.world.time_delta
+
+            if calculate_distance(a=self.location, b=agent.location) > radius_travelled:
+                continue
+
+            if len(agent.trailing_agents) > 0:
+                continue
+
+            for lamb in np.append(np.arange(0, 1, step=1 / constants.world.splits_per_step), 1):
+                own_location = Point(self.location.x * lamb + self.last_location.x * (1 - lamb),
+                                     self.location.y * lamb + self.last_location.y * (1 - lamb))
+                distance = calculate_distance(a=own_location, b=agent.location)
+                if distance <= self.radius:
+                    detection_probabilities.append(self.roll_detection_check(own_location, agent, distance))
+            probability = 1 - np.prod(
+                [(1 - p) ** (1 / constants.world.splits_per_step) for p in detection_probabilities])
+            if np.random.rand() <= probability:
+                if not self.routing_to_base:
+                    self.start_trailing(agent)
+                return
+            else:
+                pass
 
     def return_to_base(self) -> None:
+        self.guarding_target = False
+        self.routing_to_patrol = False
         self.generate_route(destination=self.base)
         self.routing_to_base = True
+
+    def roll_detection_check(self, own_location: Point, agent: Point, distance: float):
+        raise NotImplementedError("Detection check not implemented on ESCORT level.")
 
 
 class USEscort(Escort):
@@ -332,24 +402,12 @@ class USEscort(Escort):
     def observe_area(self):
         pass
 
-    def activate(self):
-        # TODO: Make activation rules based on behaviour setting
-        self.stationed = False
-        self.generate_route(self.generate_patrol_location())
-        self.routing_to_patrol = True
-
 
 class JapanEscort(Escort):
     def __init__(self, model: str, base: Harbour, obstacles: list):
         super().__init__(1, model, base, obstacles, constants.JAPAN_ESCORT_COLOR)
 
-    def activate(self):
-        # TODO: Make activation rules based on behaviour setting
-        self.stationed = False
-        self.generate_route(self.generate_patrol_location())
-        self.routing_to_patrol = True
-
-    def make_move(self):
+    def engage_agent(self):
         """
         Make next move based on behaviour and rules.
         :return:
@@ -375,20 +433,46 @@ class TaiwanEscort(Escort):
     def __init__(self, model: str, base: Harbour, obstacles: list):
         super().__init__(1, model, base, obstacles, constants.TAIWAN_ESCORT_COLOR)
 
-    def activate(self):
-        # TODO: Make activation rules based on behaviour setting
-        self.stationed = False
-        self.generate_route(self.generate_patrol_location())
-        self.routing_to_patrol = True
+        self.pheromone_type = "Alpha"
 
     def make_move(self):
         """
         Make next move based on behaviour and rules.
         :return:
         """
-        if constants.taiwan_engagement == "attack_all":
-            pass
-        elif constants.taiwan_engagement == "engaged_only":
-            pass
-        else:
-            raise NotImplementedError(f"Unknown engagement tactic {constants.taiwan_engagement}")
+        self.distance_to_travel = self.speed * constants.world.time_delta
+        self.move()
+        self.update_plot()
+
+    def move(self, distance_to_travel=None):
+        if distance_to_travel is not None:
+            self.distance_to_travel = distance_to_travel
+
+        print(f"Moving {self}: {self.distance_to_travel}, {self.trailing}, {self.behaviour}, {self.routing_to_patrol}")
+        while self.distance_to_travel > 0:
+            if self.trailing:
+                if self.is_near(self.located_agent.location):
+                    self.call_action_on_agent()
+                    self.distance_to_travel = 0
+
+            if self.behaviour == "patrol":
+                if self.routing_to_patrol:
+                    self.move_through_route()
+                else:
+                    self.make_next_patrol_move()
+
+            elif self.behaviour == "guard":
+                if self.guarding_target is not None:
+                    self.generate_route(self.guarding_target.location)
+                    self.move_through_route()
+                else:
+                    able_to_select_target = self.select_guarding_target()
+                    if not able_to_select_target:
+                        self.make_next_patrol_move()
+
+            else:
+                raise NotImplementedError(f"Behaviour {self.behaviour} not implemented!")
+
+    def roll_detection_check(self, own_location: Point, agent_location: Point, distance: float) -> float:
+        # TODO: Implement proper escort detection check
+        return 0.9

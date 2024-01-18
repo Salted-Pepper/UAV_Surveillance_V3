@@ -1,6 +1,16 @@
 import constants
 from points import Point
 
+import os
+import logging
+import datetime
+
+date = datetime.date.today()
+logging.basicConfig(level=logging.DEBUG, filename=os.path.join(os.getcwd(), 'logs/log_' + str(date) + '.log'),
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt="%H:%M")
+logger = logging.getLogger("BASE")
+logger.setLevel(logging.DEBUG)
+
 
 class Base:
     """
@@ -32,6 +42,7 @@ class Base:
             self.currently_served_agent = None
 
     def finish_maintenance_agent(self):
+        logger.debug(f"Finished maintenance of {self}")
         self.currently_served_agent.complete_maintenance()
         self.start_serve_next_agent()
 
@@ -42,6 +53,7 @@ class Base:
                 # Either complete ship maintenance
                 if self.currently_served_agent.remaining_maintenance_time < remaining_time:
                     remaining_time -= self.currently_served_agent.remaining_maintenance_time
+                    self.currently_served_agent.remaining_maintenance_time = 0
                     self.finish_maintenance_agent()
                 # Continue part of the ship service
                 else:
