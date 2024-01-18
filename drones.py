@@ -43,18 +43,6 @@ class DroneType:
         self.grounded += 1
         self.under_maintenance += 1
 
-    def launch_drone_of_type(self, world) -> None:
-        while not self.reached_utilization_rate():
-            drone_launched = False
-            for drone in self.drones:
-                if drone.grounded and not drone.under_maintenance:
-                    drone.launch(world)
-                    drone_launched = True
-                    break
-            if not drone_launched:
-                logger.debug(f"No drones of type {self.model} available for launch. Can not satisfy utilization rate")
-                return
-
     def calculate_utilization_rate(self) -> None:
         # TODO: Implement function for utilization rate
         self.utilization_rate = 0.15
@@ -86,6 +74,9 @@ class Drone(Agent):
 
         self.model = model
         self.initiate_model()
+
+    def __str__(self):
+        return f"U {self.uav_id}"
 
     def calculate_maintenance_time(self) -> None:
         """
@@ -152,7 +143,7 @@ class Drone(Agent):
                     self.call_action_on_agent()
 
         # Case 4: Patrolling an area
-        else:
+        elif self.patrolling:
             self.make_next_patrol_move()
 
         # Check if drone is in legal location
@@ -184,6 +175,16 @@ class Drone(Agent):
             self.trailing = True
             self.move()
 
+    def return_to_base(self):
+        logger.debug(f"UAV {self.uav_id} is forced to return to base.")
+        self.routing_to_patrol = False
+
+        if self.trailing:
+            self.stop_trailing("Running Low On Endurance")
+
+        self.generate_route(self.base.location)
+        self.routing_to_base = True
+
     def land(self):
         logger.debug(f"UAV {self.uav_id} landed at {self.location} - starting maintenance")
 
@@ -213,9 +214,10 @@ class Drone(Agent):
                 self.calculate_maintenance_time()
                 return
 
-    def return_to_base(self):
+    def go_resupply(self, base):
         """
         Function to be defined on agent level to ensure actions are ended correctly
+        :param: base - Forced by Parent, but not used here, as UAVs can not return to other bases
         :return:
         """
         logger.debug(f"UAV {self.uav_id} is forced to return to base.")
@@ -235,11 +237,21 @@ class Drone(Agent):
         - If reaching trailed object: take action
         :return:
         """
+        if constants.DEBUG_MODE:
+            if self.route_plot is not None:
+                for lines in self.route_plot:
+                    line = lines.pop(0)
+                    line.remove()
+                self.route_plot = None
+
+        self.route = None
 
         if self.routing_to_patrol:
+            self.routing_to_patrol = False
             self.patrolling = True
             self.move(self.distance_to_travel)
         elif self.routing_to_base:
+            self.routing_to_base = False
             self.land()
         elif self.trailing:
             pass
@@ -288,7 +300,7 @@ class Drone(Agent):
             if calculate_distance(a=self.location, b=ship.location) > radius_travelled:
                 continue
 
-            if len(ship.trailing_UAVs) > 0:
+            if len(ship.trailing_agents) > 0:
                 continue
 
             for lamb in np.append(np.arange(0, 1, step=1 / constants.world.splits_per_step), 1):

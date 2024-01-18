@@ -1,6 +1,6 @@
 import constants
 from points import Point
-from routes import create_route
+from routes import create_route, Route
 from general_maths import calculate_distance
 import copy
 
@@ -16,7 +16,7 @@ date = datetime.date.today()
 logging.basicConfig(level=logging.DEBUG, filename=os.path.join(os.getcwd(), 'logs/log_' + str(date) + '.log'),
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt="%H:%M")
 logger = logging.getLogger("AGENT")
-logger.setLevel(logging.WARNING)
+logger.setLevel(logging.DEBUG)
 
 
 class Agent:
@@ -54,6 +54,7 @@ class Agent:
         self.routing_to_base = False
         self.stationed = True
         self.destroyed = False
+        self.left_world = False
 
         self.routing_to_patrol = False
         self.patrolling = False
@@ -79,7 +80,6 @@ class Agent:
         self.remaining_points = None
 
         # ----- PLOTTING OF AGENT -----
-        self.ax = constants.axes_plot
         self.radius_patch = None
         self.route_plot = None
         self.color = color
@@ -96,6 +96,7 @@ class Agent:
         self.route = create_route(point_a=self.location, point_b=destination,
                                   polygons_to_avoid=copy.deepcopy(self.obstacles))
         self.past_points.append(self.route.points[0])
+        # self.last_location = self.route.points[0]
         self.next_point = self.route.points[1]
         self.remaining_points = self.route.points[2:]
 
@@ -113,9 +114,9 @@ class Agent:
         :return:
         """
         if self.located_agent is not None:
-            if self.located_agent.left_world:
+            if self.located_agent.stationed or self.located_agent.left_world:
                 logger.debug(f"Agent {self} is forced to stop chasing {self.located_agent} "
-                             f"- reached destination.")
+                             f"- reached destination or left world.")
                 self.stop_trailing("Target Reached Destination")
                 return
 
@@ -173,6 +174,10 @@ class Agent:
         """
         self.move(self.distance_to_travel)
 
+    def remove_trailing_agents(self, reason: str) -> None:
+        for agent in self.trailing_agents:
+            agent.stop_trailing(reason)
+
     def reached_end_of_route(self) -> None:
         """
         Set of instructions to follow once the end of agent route is reached.
@@ -182,6 +187,7 @@ class Agent:
         raise NotImplementedError(f"Reach end of route function not implemented for standard AGENT type.")
 
     def make_move(self):
+        self.distance_to_travel = self.speed * constants.world.time_delta
         self.move()
         self.update_plot()
 
@@ -199,6 +205,7 @@ class Agent:
         :param distance_to_travel: Distance to travel during this timestep
         :return: remaining distance to travel
         """
+        logger.debug(f"{self} routing through {[str(p) for p in self.route.points]}")
         if distance_to_travel is not None:
             self.distance_to_travel = distance_to_travel
 
@@ -227,6 +234,7 @@ class Agent:
 
                 # Instance 2.1: We can reach the next point
                 if distance_to_next_point <= distance_travelled:
+                    self.last_location = self.next_point
                     self.past_points.append(self.next_point)
                     self.location = copy.deepcopy(self.next_point)
 
@@ -457,14 +465,6 @@ class Agent:
 
         self.location = copy.deepcopy(new_location)
         self.location.name = f"Agent {self}"
-        if constants.DEBUG_MODE:
-            for polygon in self.obstacles:
-                if polygon.check_if_contains_point(self.location):
-                    raise PermissionError(f"Agent {self} went from "
-                                          f"({self.last_location.x}, {self.last_location.y}) "
-                                          f"to ({self.location.x}, {self.last_location.y}) "
-                                          f"which is in a polygon - {self.trailing=}, {self.routing_to_base=}, "
-                                          f"{self.routing_to_patrol=}, {self.patrolling=}")
 
         # Check if drone is in legal location
         if constants.DEBUG_MODE:
@@ -517,6 +517,18 @@ class Agent:
         """
         raise NotImplementedError("No support protocol for base object AGENT")
 
+    def start_retreat(self) -> None:
+        """
+        Start retreat process, generate a route back out of the area of interest
+        :return:
+        """
+        print(f"{self} is retreating with {self.health_points=}")
+        if self.routing_to_base:
+            return
+        else:
+            self.routing_to_base = True
+            self.generate_route(destination=self.base)
+
     def remove_from_plot(self):
         if not constants.PLOTTING_MODE:
             return
@@ -543,21 +555,25 @@ class Agent:
 
         self.remove_from_plot()
 
-        if self.stationed:
+        if self.stationed or self.left_world:
             return
 
         # Re-add new plots
         if constants.DEBUG_MODE and self.route is not None:
-            self.route_plot = self.route.add_route_to_plot(constants.axes_plot)
+            remaining_route = Route(points=([self.location] + [self.next_point] + self.remaining_points))
+            self.route_plot = remaining_route.add_route_to_plot(constants.axes_plot, color=self.color)
+            # self.route_plot = self.route.add_route_to_plot(constants.axes_plot)
 
         self.radius_patch = matplotlib.patches.Circle((self.location.x, self.location.y),
                                                       radius=self.radius / constants.LATITUDE_CONVERSION_FACTOR,
                                                       color=self.color, alpha=0.1, linewidth=None)
-        self.ax.add_patch(self.radius_patch)
-        self.marker = self.ax.plot(self.location.x, self.location.y, color=self.color,
-                                   marker="X", markersize=constants.WORLD_MARKER_SIZE - 1, markeredgecolor="black")
 
-        self.text = self.ax.text(self.location.x, self.location.y - 0.001, color="white")
+        constants.world.ax.add_patch(self.radius_patch)
+        self.marker = constants.world.ax.plot(self.location.x, self.location.y, color=self.color,
+                                              marker="X", markersize=constants.WORLD_MARKER_SIZE - 1,
+                                              markeredgecolor="black")
+
+        self.text = constants.world.ax.text(self.location.x, self.location.y - 0.001, s=str(self), color="white")
 
     def debug(self) -> None:
         """
@@ -567,7 +583,8 @@ class Agent:
         for polygon in self.obstacles:
             if polygon.check_if_contains_point(P=self.location, exclude_edges=True):
                 self.location.add_point_to_plot(axes=constants.axes_plot, color="yellow")
-                self.last_location.add_point_to_plot(axes=constants.axes_plot, color="purple", text="LAST")
+                if self.last_location is not None:
+                    self.last_location.add_point_to_plot(axes=constants.axes_plot, color="purple", text="LAST")
                 self.next_point.add_point_to_plot(axes=constants.axes_plot, color="red", text="NEXT")
 
                 if self.located_agent is not None:
@@ -582,11 +599,13 @@ class Agent:
                     p.add_point_to_plot(axes=constants.axes_plot, color="black", text=p.point_id)
                 if self.route is not None:
                     self.route.add_route_to_plot(axes=constants.axes_plot)
-                raise PermissionError(f"Agent at illegal location: "
+                raise PermissionError(f"Agent {self} at illegal location: \n"
                                       f"({self.location.x: .3f}, {self.location.y: .3f}). \n"
-                                      f"Route is {[str(p) for p in self.route.points]} "
-                                      f"next point: {self.next_point} "
-                                      f"last point: {self.last_location} "
-                                      f"trailing? : {self.trailing}. "
+                                      f"Route is {[str(p) for p in self.route.points]} \n"
+                                      f"Routing to base: {self.routing_to_base} \n"
+                                      f"Stationed? {self.stationed} \n"
+                                      f"next point: {self.next_point} \n"
+                                      f"last point: {self.last_location} \n"
+                                      f"trailing? : {self.trailing}. \n"
                                       f"Last location = ({self.last_location.x}, {self.last_location.y}). \n"
                                       f"this falls in polygon {[str(p) for p in polygon.points]}")

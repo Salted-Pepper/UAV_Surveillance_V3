@@ -29,7 +29,7 @@ class Base:
         if len(self.maintenance_queue) > 0:
             self.currently_served_agent = self.maintenance_queue.pop(0)
         else:
-            pass
+            self.currently_served_agent = None
 
     def finish_maintenance_agent(self):
         self.currently_served_agent.complete_maintenance()
@@ -40,12 +40,12 @@ class Base:
         while remaining_time > 0:
             if self.currently_served_agent is not None:
                 # Either complete ship maintenance
-                if self.currently_served_agent.remaining_service_time < remaining_time:
-                    remaining_time -= self.currently_served_agent.remaining_service_time
+                if self.currently_served_agent.remaining_maintenance_time < remaining_time:
+                    remaining_time -= self.currently_served_agent.remaining_maintenance_time
                     self.finish_maintenance_agent()
                 # Continue part of the ship service
                 else:
-                    self.currently_served_agent.remaining_service_time -= remaining_time
+                    self.currently_served_agent.remaining_maintenance_time -= remaining_time
                     return
             # No Ship is currently served, but queue existing
             elif self.currently_served_agent is None and len(self.maintenance_queue) > 0:

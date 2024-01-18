@@ -6,8 +6,10 @@ from drones import Drone, DroneType
 from points import Point
 
 import model_info
-import numpy as np
 import constants
+
+import random
+import numpy as np
 
 import os
 import logging
@@ -17,7 +19,7 @@ date = datetime.date.today()
 logging.basicConfig(level=logging.DEBUG, filename=os.path.join(os.getcwd(), 'logs/navy_log_' + str(date) + '.log'),
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt="%H:%M:%S")
 logger = logging.getLogger("MANAGERS")
-logger.setLevel(logging.WARNING)
+logger.setLevel(logging.DEBUG)
 
 
 class AgentManager:
@@ -52,7 +54,7 @@ class AgentManager:
             agent_of_model = [agent for agent in self.agents if agent.model == model][0]
             min_time_to_trail = 0.5
             min_time_to_travel = 600 / agent_of_model.speed
-            self.utilization_rates['model'] = (
+            self.utilization_rates[model] = 0.5 * (
                     (agent_of_model.endurance - (2 * min_time_to_travel + min_time_to_trail)) /
                     (agent_of_model.endurance + agent_of_model.maintenance_time))
 
@@ -64,12 +66,15 @@ class AgentManager:
         pass
 
     def manage_agents(self):
+        logger.debug(f"{self} performing custom actions")
         self.custom_actions()
 
+        logger.debug(f"{self} serving agents")
         for base in self.bases:
             base.serve_agents()
 
         # Check if the agent has been destroyed
+        logger.debug(f"{self} checking destroyed agents")
         active_agents = [agent for agent in self.agents if not agent.stationed]
         for agent in active_agents:
             if agent.destroyed:
@@ -77,6 +82,7 @@ class AgentManager:
                 self.destroyed_agents.append(agent)
 
         # Check if agent needs to return for resupply
+        logger.debug(f"{self} checking if agents require resupplying")
         active_agents = [agent for agent in self.agents if not agent.stationed]
         for agent in active_agents:
             if isinstance(agent, Merchant):
@@ -99,24 +105,28 @@ class AgentManager:
                 agent.go_resupply(base)
 
         # Check if utilization is satisfied - if not, send out new agents if feasible
+        logger.debug(f"{self} checking if we are able to send out more agents")
         for model in set([agent.model for agent in self.agents]):
             agents_of_model = [agent for agent in self.agents if agent.model == model]
             active_agents = [agent for agent in agents_of_model if not agent.stationed]
             current_utilization = len(active_agents) / len(agents_of_model)
             available_inactive_agents = [agent for agent in agents_of_model
-                                         if agent.remaining_maintenance_time == 0 and agent.stationed]
+                                         if agent.remaining_maintenance_time == 0
+                                         and agent.stationed]
 
             # TODO: OPTIONAL See if we can launch more than one per timestep?
             #  - maybe depending on length of timestep?
-            while current_utilization < 1 and len(available_inactive_agents) > 0:
+            while current_utilization < self.utilization_rates[model] and len(available_inactive_agents) > 0:
                 ready_agent = np.random.choice(available_inactive_agents)
                 ready_agent.activate()
 
-                current_utilization = len(active_agents) / len(agents_of_model)
                 available_inactive_agents = [agent for agent in agents_of_model
-                                             if agent.remaining_maintenance_time == 0 and agent.stationed]
+                                             if agent.remaining_maintenance_time == 0
+                                             and agent.stationed]
+                current_utilization = (len(agents_of_model) - len(available_inactive_agents)) / len(agents_of_model)
 
         # Make agent moves
+        logger.debug(f"{self} making agent moves")
         for agent in [agent for agent in self.agents if not agent.stationed]:
             agent.make_move()
 
@@ -136,6 +146,7 @@ class UAVManager(AgentManager):
 
         self.initiate_bases()
         self.initiate_drones()
+        self.calculate_utilization_rates()
 
     def __str__(self):
         return "UAV Agent Manager"
@@ -158,7 +169,7 @@ class UAVManager(AgentManager):
                                    amount=np.floor(model['number_of_airframes'] * constants.UAV_AVAILABILITY))
             self.drone_types.append(drone_type)
 
-            for _ in range(model['number_of_airframes']):
+            for _ in range(int(np.floor(model['number_of_airframes'] * constants.UAV_AVAILABILITY))):
                 new_drone = Drone(model=model['name'], drone_type=drone_type,
                                   base=np.random.choice(self.bases), obstacles=constants.world.landmasses)
                 self.agents.append(new_drone)
@@ -166,16 +177,12 @@ class UAVManager(AgentManager):
 
             drone_type.calculate_utilization_rate()
 
-    def launch_drone(self) -> None:
-        for drone_type in self.drone_types:
-            if not drone_type.reached_utilization_rate():
-                drone_type.launch_drone_of_type(self)
-
 
 class MerchantManager(AgentManager):
     """
     Manager for all 'neutral' Merchants
     """
+
     def __init__(self):
         super().__init__()
         self.initiate_bases()
@@ -202,14 +209,15 @@ class MerchantManager(AgentManager):
         if len(self.bases) == 0:
             raise ValueError("No list of bases available to select from")
         else:
-            return np.random.choice(self.bases, p=[base.probability if base.probability is not None else 1
-                                                   for base in self.bases])
+            return random.choices(self.bases, weights=[base.probability
+                                                       if base.probability is not None else 1 / len(self.bases)
+                                                       for base in self.bases], k=1)[0]
 
     def generate_new_merchant(self) -> None:
-        model = np.random.choice(a=["Cargo", "Container", "Bulk"],
-                                 p=[constants.CARGO_DAILY_ARRIVAL_MEAN,
-                                    constants.BULK_DAILY_ARRIVAL_MEAN,
-                                    constants.CONTAINER_DAILY_ARRIVAL_MEAN])
+        model = random.choices(["Cargo", "Container", "Bulk"],
+                               weights=[constants.CARGO_DAILY_ARRIVAL_MEAN,
+                                        constants.BULK_DAILY_ARRIVAL_MEAN,
+                                        constants.CONTAINER_DAILY_ARRIVAL_MEAN], k=1)[0]
         base = self.select_random_base()
         new_merchant = Merchant(model, base, obstacles=constants.world.landmasses)
         self.agents.append(new_merchant)
@@ -222,7 +230,7 @@ class MerchantManager(AgentManager):
         :return: Integer number of ships entering
         """
         # TODO: Sample from poisson with rate lambda as in overleaf
-        if np.random.rand() > 0.99:
+        if np.random.rand() > 0.98:
             return 1
         else:
             return 0
@@ -230,6 +238,27 @@ class MerchantManager(AgentManager):
     def custom_actions(self) -> None:
         for _ in range(self.calculate_ships_entering()):
             self.generate_new_merchant()
+
+    def manage_agents(self):
+        logger.debug(f"{self} performing custom actions...")
+        self.custom_actions()
+
+        logger.debug(f"{self} serving agents...")
+        for base in self.bases:
+            base.serve_agents()
+
+        # Check if the agent has been destroyed
+        logger.debug(f"{self} checking for destroyed agents...")
+        active_agents = [agent for agent in self.agents if not agent.stationed]
+        for agent in active_agents:
+            if agent.destroyed:
+                self.agents.remove(agent)
+                self.destroyed_agents.append(agent)
+
+        # Make agent moves
+        logger.debug(f"{self} making moves...")
+        for agent in [agent for agent in self.agents if not agent.stationed and not agent.destroyed]:
+            agent.make_move()
 
 
 class USManager(AgentManager):
@@ -242,6 +271,8 @@ class USManager(AgentManager):
 
         self.initiate_bases()
         self.initiate_agents()
+
+        self.calculate_utilization_rates()
 
     def __str__(self):
         return "US Agent Manager"
@@ -263,6 +294,8 @@ class TaiwanManager(AgentManager):
 
         self.initiate_bases()
         self.initiate_agents()
+
+        self.calculate_utilization_rates()
 
     def __str__(self):
         return "Taiwan Agent Manager"
@@ -286,6 +319,8 @@ class JapanManager(AgentManager):
 
         self.initiate_bases()
         self.initiate_agents()
+
+        self.calculate_utilization_rates()
 
     def __str__(self):
         return "Japan Agent Manager"

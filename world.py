@@ -22,7 +22,7 @@ import constants
 import constants_coords
 from polygons import Polygon
 from receptors import ReceptorGrid
-from managers import USManager, TaiwanManager, JapanManager, UAVManager
+from managers import MerchantManager, USManager, TaiwanManager, JapanManager, UAVManager
 
 date = datetime.date.today()
 
@@ -129,6 +129,7 @@ class World:
 
     def initiate_managers(self) -> None:
         self.managers = [UAVManager(),
+                         MerchantManager(),
                          USManager(),
                          TaiwanManager(),
                          JapanManager(),
@@ -183,7 +184,7 @@ class World:
         self.update_weather_conditions()
 
         for management in self.managers:
-            print(f"{management} is working...")
+            logger.debug(f"{management} is working...")
             management.manage_agents()
 
         t_0 = time.perf_counter()
@@ -214,7 +215,7 @@ if __name__ == "__main__":
     t_0 = time.perf_counter()
     world = World(time_delta=0.2)
 
-    for z in range(100):
+    for z in range(10000):
         world.time_step()
 
     t_1 = time.perf_counter()

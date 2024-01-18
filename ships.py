@@ -42,12 +42,13 @@ class Ship(Agent):
         self.pheromone_spread = -100
 
     def __str__(self):
-        return f"Ship {self.ship_id}"
+        return f"S {self.ship_id}"
 
     def enter_world(self) -> None:
         self.stationed = False
         self.enter_world_time = constants.world.world_time
         self.generate_ship_entry_point()
+        self.generate_route(self.base.location)
 
     def generate_ship_entry_point(self) -> None:
         """
@@ -63,6 +64,7 @@ class Ship(Agent):
         self.routing_to_base = True
 
     def enter_dock(self):
+        logger.debug(f"{self} reached dock")
         self.routing_to_base = False
         self.stationed = True
         self.start_maintenance()
@@ -116,14 +118,19 @@ class Ship(Agent):
 class Merchant(Ship):
     def __init__(self, model: str, base: Harbour, obstacles: list):
         super().__init__(1, base, obstacles, constants.MERCHANT_COLOR)
+        self.health_points = constants.MERCHANT_HEALTH
         self.max_health = constants.MERCHANT_HEALTH
 
         self.base = base
 
         self.model = model
 
+        self.maintenance_time = constants.MERCHANT_MAINTENANCE_TIME
+        self.leaving_world = False
         self.cargo_load = None
         self.RCS = None
+
+        self.radius = 0
 
         self.initiate_parameters()
 
@@ -140,42 +147,90 @@ class Merchant(Ship):
             self.speed = constants.CONTAINER_AVERAGE_SPEED
             self.cargo_load = constants.CONTAINER_AVERAGE_LOAD
             self.RCS = constants.CONTAINER_RCS
+        else:
+            raise NotImplementedError(self.model)
+
+    def move(self, distance_to_travel=None):
+        self.move_through_route(distance_to_travel)
 
     def activate(self):
         self.stationed = False
-        self.routing_to_base = True
+        self.leaving_world = True
         self.generate_route(self.entry_point)
 
-    def reached_end_of_route(self) -> None:
-        self.route = None
-        self.enter_dock()
-        for agent in self.trailing_agents:
-            agent.stop_trailing("Merchant Target has reached a Port")
+    def complete_maintenance(self):
+        logger.debug(f"{self} finished maintenance.")
+        self.health_points = self.max_health
+        self.ammunition = self.max_ammunition
+        self.stationed = False
 
-    def return_to_base(self) -> None:
+    def receive_damage(self, damage: int) -> None:
         """
-        Merchants don't have a fixed base.
-        Start a retreat process, generate a route back out of the area of interest
+        Receive damage from drone attack and adjust behaviour according to result
+        :param damage:
         :return:
         """
-        print(f"{self.ship_type} {self.ship_id} is retreating with {self.health_points=}")
-        if self.routing_to_base:
+
+        damage = damage + 10 * self.damage_penalty
+        self.health_points -= damage
+        logger.debug(f"{self.ship_type} {self.ship_id} received {damage} damage. New health: {self.health_points}")
+
+        # Set Damage Effects
+        if self.health_points >= 81:
+            return
+        elif self.health_points >= 71:
+            pass
+        elif self.health_points >= 47:
+            self.damage_penalty = 1
+        elif self.health_points >= 21:
+            self.damage_penalty = 2
+        # TODO : Address 9-16 range (CTL but not retreating?)
+        elif self.health_points >= 9:
+            self.CTL = True
+            self.damage_penalty = 2
+        else:
+            self.sinking()
+            return
+
+        # retreat unless health > 81 or sunk
+        self.start_retreat()
+
+    def start_retreat(self) -> None:
+        """
+        Start retreat process, generate a route back out of the area of interest
+        :return:
+        """
+        print(f"{self} is retreating with {self.health_points=}")
+        if self.leaving_world:
             return
         else:
-            self.routing_to_base = True
+            self.leaving_world = True
             self.generate_route(destination=self.entry_point)
 
-    def complete_maintenance(self):
-        self.health_points = self.max_health
+    def reached_end_of_route(self) -> None:
+        """
+        Set of instructions to follow once the end of agent route is reached.
+        Not provided on Agent level
+        :return:
+        """
+        self.route = None
+        self.remove_from_plot()
+
+        if self.leaving_world:
+            self.stationed = True
+            self.remove_trailing_agents("Merchant left world")
+        elif self.routing_to_base:
+            self.enter_dock()
+            self.remove_trailing_agents("Merchant reached safe dock")
 
 
-def generate_random_merchant(world) -> Merchant:
+def generate_random_merchant() -> Merchant:
     model = random.choices(["Cargo", "Container", "Bulk"],
                            [constants.CARGO_DAILY_ARRIVAL_MEAN,
                             constants.BULK_DAILY_ARRIVAL_MEAN,
                             constants.CONTAINER_DAILY_ARRIVAL_MEAN])[0]
     base = random.choices(constants.world.docks, weights=[0.4, 0.3, 0.25, 0.05], k=1)[0]
-    return Merchant(model=model, base=base, obstacles=world.landmasses)
+    return Merchant(model=model, base=base, obstacles=constants.world.landmasses)
 
 
 class Escort(Ship):
@@ -189,7 +244,8 @@ class Escort(Ship):
         self.armed = None
         self.max_speed = None
         self.contains_helicopter = None
-        self.endurance = None
+        # TODO: Implement Individual maint time for Escorts
+        self.maintenance_time = 24
 
         self.speed = constants.CRUISING_SPEED
 

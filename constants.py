@@ -75,7 +75,7 @@ RECEPTOR_RADIUS_MULTIPLIER = 10
 UAV_HEALTH = 100
 MAX_TRAILING_DISTANCE = 0.01
 
-SAFETY_ENDURANCE = 0.1
+SAFETY_ENDURANCE = 0.05
 
 PATROL_MIN_LAT = 117
 PATROL_MAX_LAT = 150
@@ -83,7 +83,7 @@ PATROL_MAX_LAT = 150
 PATROL_MIN_LONG = 10
 PATROL_MAX_LONG = 40
 
-UAV_AVAILABILITY = 0.5
+UAV_AVAILABILITY = 0.1
 
 # ---- Detection Parameters ----
 UAV_MOVEMENT_SPLITS_P_H = 24  # (24 is at least 2 every 5 mins) Splits per hour - gets recalculated per timedelta
@@ -119,11 +119,12 @@ CONTAINER_RCS = 1.5
 CRUISING_SPEED = 12 * 1.852
 
 ESCORT_MAINTENANCE_TIME = 6  # Time for escorts to refuel/resupply
-MERCHANT_MAINTENANCE_TIME = 24  # Time for merchants to return overseas
+MERCHANT_MAINTENANCE_TIME = 3*24  # Time for merchants to return overseas
 
 # ---- Plotting Constants -----
 WORLD_MARKER_SIZE = 7
 STANDARD_ROUTE_COLOR = "red"
+ROUTE_OPACITY = 0.5
 MERCHANT_COLOR = "black"
 US_ESCORT_COLOR = "navy"
 TAIWAN_ESCORT_COLOR = "forestgreen"
