@@ -43,7 +43,7 @@ class Ship(Agent):
         self.pheromone_spread = 100
 
     def __str__(self):
-        return f"s {self.ship_id}"
+        return f"s{self.ship_id}"
 
     def enter_world(self) -> None:
         self.stationed = False
@@ -81,7 +81,7 @@ class Ship(Agent):
 
         damage = damage + 10 * self.damage_penalty
         self.health_points -= damage
-        logger.debug(f"{self.ship_type} {self.ship_id} received {damage} damage. New health: {self.health_points}")
+        logger.debug(f"Ship {self.ship_id} received {damage} damage. New health: {self.health_points}")
 
         # Set Damage Effects
         if self.health_points >= 81:
@@ -244,6 +244,10 @@ class Escort(Ship):
         self.model = model
         self.RCS = 3  # TODO: Implement proper RCS for escorts
         self.radius = 10  # TODO: Implement proper search radius for escorts
+
+        self.max_ammunition = 1000  # TODO: See if we implement ammunition levels for ships
+        self.ammunition = 1000
+
         self.length = None
         self.displacement = None
         self.armed = None
@@ -329,10 +333,13 @@ class Escort(Ship):
         False otherwise.
         :return:
         """
-        merchants = [vessel for vessel in constants.world.current_vessels
-                     if vessel.ship_type == "Merchant" and not len(vessel.guarding_agents) == 0]
+        merchant_manager = [manager for manager in constants.world.managers if manager.name == "MerchantManager"][0]
+        merchants = [agent for agent in merchant_manager.agents
+                     if len(agent.guarding_agents) == 0]
+        print(f"{self} trying to select guarding target out of {[str(m) for m in merchant_manager.agents]}")
 
         # TODO: refine how a target is selected - for now just closest unguarded merchant
+        # TODO: Also allow ships to "trade" who is guarding, let the closest willing ship go first
         if len(merchants) == 0:
             return False
 
@@ -375,7 +382,7 @@ class Escort(Ship):
     def return_to_base(self) -> None:
         self.guarding_target = False
         self.routing_to_patrol = False
-        self.generate_route(destination=self.base)
+        self.generate_route(destination=self.base.location)
         self.routing_to_base = True
 
     def roll_detection_check(self, own_location: Point, agent: Point, distance: float):
@@ -454,6 +461,10 @@ class TaiwanEscort(Escort):
         self.move()
         self.update_plot()
 
+    def engage_agent(self):
+        # TODO: Attack Taiwanese attack capabilities
+        pass
+
     def move(self, distance_to_travel=None):
         if distance_to_travel is not None:
             self.distance_to_travel = distance_to_travel
@@ -474,6 +485,7 @@ class TaiwanEscort(Escort):
                 if self.guarding_target is not None:
                     self.generate_route(self.guarding_target.location)
                     self.move_through_route()
+                # TODO: Refine behaviour when not guarding - maybe go to more central position?
                 else:
                     able_to_select_target = self.select_guarding_target()
                     if not able_to_select_target:

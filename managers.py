@@ -30,6 +30,7 @@ class AgentManager:
     """
 
     def __init__(self):
+        self.name = None
         self.agents = []
         self.destroyed_agents = []
         self.bases = []
@@ -182,6 +183,7 @@ class MerchantManager(AgentManager):
 
     def __init__(self):
         super().__init__()
+        self.name = "MerchantManager"
         self.initiate_bases()
 
     def __str__(self):
@@ -227,7 +229,7 @@ class MerchantManager(AgentManager):
         :return: Integer number of ships entering
         """
         # TODO: Sample from poisson with rate lambda as in overleaf
-        if np.random.rand() > 0.99:
+        if np.random.rand() > 0.98:
             return 1
         else:
             return 0
