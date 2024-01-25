@@ -299,8 +299,13 @@ class Drone(Agent):
         t_0 = time.perf_counter()
         active_hostile_ships = [agent
                                 for manager in constants.world.managers
-                                for agent in manager.agents
-                                if agent.team != self.team]
+                                if manager.team != self.team
+                                for agent in manager.agents]
+        # [agent
+        # for manager in constants.world.managers
+        # for agent in manager.agents
+        # if agent.team != self.team]
+
         for ship in active_hostile_ships:
             detection_probabilities = []
 

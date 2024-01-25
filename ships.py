@@ -222,6 +222,7 @@ class Merchant(Ship):
         if self.leaving_world:
             self.stationed = True
             self.remove_trailing_agents("Merchant left world")
+            self.remove_guarding_agents()
         elif self.routing_to_base:
             self.enter_dock()
         self.remove_from_plot()
@@ -380,7 +381,7 @@ class Escort(Ship):
                 pass
 
     def return_to_base(self) -> None:
-        self.guarding_target = False
+        self.stop_guarding()
         self.routing_to_patrol = False
         self.generate_route(destination=self.base.location)
         self.routing_to_base = True

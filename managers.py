@@ -30,6 +30,7 @@ class AgentManager:
     """
 
     def __init__(self):
+        self.team = None
         self.name = None
         self.agents = []
         self.destroyed_agents = []
@@ -115,8 +116,8 @@ class AgentManager:
                                          if agent.remaining_maintenance_time == 0
                                          and agent.stationed]
 
-            # TODO: OPTIONAL See if we can launch more than one per timestep?
-            #  - maybe depending on length of timestep?
+            # TODO: OPTIONAL See if we can actually launch more than one per timestep?
+            #  - maybe depending on length of timestep? (runway limits)
             while current_utilization < self.utilization_rates[model] and len(available_inactive_agents) > 0:
                 ready_agent = available_inactive_agents.pop(0)
                 ready_agent.activate()
@@ -139,7 +140,7 @@ class UAVManager(AgentManager):
 
     def __init__(self):
         super().__init__()
-
+        self.team = 2
         self.drone_types = []
 
         self.initiate_bases()
@@ -159,7 +160,7 @@ class UAVManager(AgentManager):
                       ]
 
     def initiate_drones(self):
-        # TODO: Distribute drones equally over airbases
+        # TODO: Distribute drones equally over airbases instead of randomly
         logger.debug("Initiating Drones...")
 
         for model in model_info.UAV_MODELS:
@@ -183,6 +184,7 @@ class MerchantManager(AgentManager):
 
     def __init__(self):
         super().__init__()
+        self.team = 1
         self.name = "MerchantManager"
         self.initiate_bases()
 
@@ -267,6 +269,7 @@ class USManager(AgentManager):
 
     def __init__(self):
         super().__init__()
+        self.team = 1
 
         self.initiate_bases()
         self.initiate_agents()
@@ -290,6 +293,7 @@ class TaiwanManager(AgentManager):
 
     def __init__(self):
         super().__init__()
+        self.team = 1
 
         self.initiate_bases()
         self.initiate_agents()
@@ -355,6 +359,7 @@ class JapanManager(AgentManager):
 
     def __init__(self):
         super().__init__()
+        self.team = 1
 
         self.initiate_bases()
         self.initiate_agents()

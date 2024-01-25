@@ -574,7 +574,7 @@ class Agent:
         if constants.DEBUG_MODE and self.route is not None:
             remaining_route = Route(points=([self.location] + [self.next_point] + self.remaining_points))
             self.route_plot = remaining_route.add_route_to_plot(constants.axes_plot, color=self.color)
-            # self.route_plot = self.route.add_route_to_plot(constants.axes_plot)
+            # self.route_plot = self.route.add_route_to_plot(constants.axes_plot)  # Plots entire route instead
 
         self.radius_patch = matplotlib.patches.Circle((self.location.x, self.location.y),
                                                       radius=self.radius / constants.LATITUDE_CONVERSION_FACTOR,
