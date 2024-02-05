@@ -26,6 +26,8 @@ time_spent_selecting_receptors = 0
 world = None
 WEATHER_RESAMPLING_TIME_SPLIT = 1
 
+COMMUNICATION_DELAY = 0.5
+
 # ---- GEO Constants ----
 EXPANSION_PARAMETER = 0.001  # Parameter to slightly extend polygons to prevent overlaps when selecting a point
 
@@ -139,6 +141,7 @@ MERCHANT_MAINTENANCE_TIME = 3 * 24  # Time for merchants to return overseas
 WORLD_MARKER_SIZE = 7
 STANDARD_ROUTE_COLOR = "red"
 ROUTE_OPACITY = 0.5
+RANGE_BAND_OPACITY = 0.3
 MERCHANT_COLOR = "black"
 US_ESCORT_COLOR = "navy"
 TAIWAN_ESCORT_COLOR = "forestgreen"

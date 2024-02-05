@@ -1,6 +1,9 @@
 import random
+import copy
 import math
-from general_maths import calculate_direction_vector
+import matplotlib.patches
+
+from general_maths import calculate_direction_vector, km_to_latitudinal_distance, km_to_longitudinal_distance
 
 import constants
 from points import Point
@@ -16,13 +19,15 @@ class OTH:
         self.normalize_direction(direction_point)
 
         # Degree of the
-        self.angle = 45
+        self.angle = 35
         # Save degrees and sines/cosines to prevent redoing calculations consistently
-        self.pos_cos = math.cos(self.angle)
-        self.pos_sin = math.sin(self.angle)
-        self.neg_cos = math.cos(-self.angle)
-        self.neg_sin = math.sin(-self.angle)
+        self.pos_cos = math.cos(math.radians(self.angle / 2))
+        self.pos_sin = math.sin(math.radians(self.angle / 2))
+        # rev: for reverse rotation
+        self.rev_cos = math.cos(math.radians(-self.angle / 2))
+        self.rev_sin = math.sin(math.radians(-self.angle / 2))
 
+        self.color = "black"
         self.active = False
 
         # Scanning parameters
@@ -37,6 +42,13 @@ class OTH:
         self.scanned_polygon = None
         self.range_band_plot = None
 
+        # Status of actions and located agents
+        self.located_agents = []
+        self.action_queue = []
+
+    def __str__(self):
+        return f"OTH at {self.location.x}, {self.location.y}"
+
     def normalize_direction(self, direction_point):
         """
         Ensure that the direction of the OTH is a normalized position.
@@ -44,9 +56,29 @@ class OTH:
         """
         self.direction = calculate_direction_vector(self.location, direction_point)
 
+    def perform_scan(self):
+        """
+        Perform all the actions for the OTH for each turn
+        :return:
+        """
+        # First check if OTH should be active
+        if round(constants.world.time_of_day, 3) == 7:
+            self.roll_if_active(time="AM")
+
+        elif round(constants.world.time_of_day, 3) == 19:
+            self.roll_if_active(time="PM")
+
+        else:
+            pass
+
+        # then if active, take the next step of the range scan
+        if self.active:
+            self.check_scan_area()
+            self.call_actions()
+            self.update_range_band_plot()
+
     @staticmethod
     def detected_agent(agent) -> bool:
-
         receptor = constants.world.receptor_grid.get_closest_receptor(agent.location)
         sea_state = receptor.sea_state
         detected = False
@@ -68,20 +100,48 @@ class OTH:
 
         return detected
 
+    def call_actions(self):
+        """
+        Queues actions for located agents.
+        :return:
+        """
+        tasks_to_remove = []
+        for task in self.action_queue:
+            action, agent_location, time = task
+            if action == "call UAV":
+                successful = constants.world.UAV_manager.send_patrol_to_location(agent_location)
+
+                if successful:
+                    tasks_to_remove.append(task)
+            else:
+                raise NotImplementedError(f"Action {action} not implemented for OTH action call!")
+
+        for task in tasks_to_remove:
+            self.action_queue.remove(task)
+
+        for agent in self.located_agents:
+            self.action_queue.append(["call UAV",
+                                      copy.deepcopy(agent.location),
+                                      constants.world.world_time + constants.COMMUNICATION_DELAY])
+        self.located_agents = []
+
     def check_scan_area(self) -> None:
+
         min_range = self.current_band
         max_range = self.current_band + (constants.world.time_delta / self.scan_time) * self.range_band
 
         if max_range > self.max_band:
             max_range = self.max_band
-            self.current_band = min_range
+            self.current_band = self.min_band
         else:
             self.current_band = max_range
 
         agents_to_check = [agent
                            for manager in constants.world.managers
                            if manager.team != self.team
-                           for agent in manager.agents]
+                           for agent in manager.agents
+                           if not agent.stationed
+                           and not agent.destroyed]
 
         self.scanned_polygon = self.calculate_scanned_polygon(min_range, max_range)
 
@@ -89,7 +149,9 @@ class OTH:
         for agent in agents_to_check:
             self.scanned_polygon.check_if_contains_point(agent.location)
             if self.detected_agent(agent):
+                print(f"Located agent {agent} at ({agent.location.x}, {agent.location.y})")
                 located_agents.append(agent)
+        self.located_agents.extend(located_agents)
 
     def calculate_scanned_polygon(self, min_range: float, max_range: float) -> Polygon:
         """
@@ -98,22 +160,37 @@ class OTH:
         :param max_range: Maximum bandwidth for the current timestep
         :return:
         """
-        direction_vector_x_min = self.location.x + self.direction[0] * min_range
-        direction_vector_y_min = self.location.y + self.direction[1] * min_range
+        print(f"{self} calculating Polygon...")
+        direction_vector_x_min = self.location.x + self.direction[0] * km_to_latitudinal_distance(min_range,
+                                                                                                  self.location.y)
+        direction_vector_y_min = self.location.y + self.direction[1] * km_to_longitudinal_distance(min_range)
 
-        direction_vector_x_max = self.location.x + self.direction[0] * max_range
-        direction_vector_y_max = self.location.y + self.direction[1] * max_range
+        direction_vector_x_max = self.location.x + self.direction[0] * km_to_latitudinal_distance(max_range,
+                                                                                                  self.location.y)
+        direction_vector_y_max = self.location.y + self.direction[1] * km_to_longitudinal_distance(max_range)
 
-        low_min = Point(self.neg_cos*direction_vector_x_min - self.neg_sin*direction_vector_y_min,
-                        self.neg_sin*direction_vector_x_min + self.neg_cos*direction_vector_y_min)
-        high_min = Point(self.pos_cos*direction_vector_x_min - self.pos_sin*direction_vector_y_min,
-                         self.pos_sin*direction_vector_x_min + self.pos_cos*direction_vector_y_min)
-        low_max = Point(self.neg_cos*direction_vector_x_max - self.neg_sin*direction_vector_y_max,
-                        self.neg_sin*direction_vector_x_max + self.neg_cos*direction_vector_y_max)
-        high_max = Point(self.pos_cos*direction_vector_x_max - self.pos_sin*direction_vector_y_max,
-                         self.pos_sin*direction_vector_x_max + self.pos_cos*direction_vector_y_max)
+        dir_point_min = Point(direction_vector_x_min, direction_vector_y_min)
+        dir_point_max = Point(direction_vector_x_max, direction_vector_y_max)
 
-        return Polygon(points=[low_min, high_min, low_max, high_max],
+        # We now rotate the points with the angle. We have to subtract location to rotate around the origin then readd
+        low_min = Point(self.rev_cos * (direction_vector_x_min - self.location.x)
+                        - self.rev_sin * (direction_vector_y_min - self.location.y) + self.location.x,
+                        self.rev_sin * (direction_vector_x_min - self.location.x)
+                        + self.rev_cos * (direction_vector_y_min - self.location.y) + self.location.y)
+        high_min = Point(self.pos_cos * (direction_vector_x_min - self.location.x)
+                         - self.pos_sin * (direction_vector_y_min - self.location.y) + self.location.x,
+                         self.pos_sin * (direction_vector_x_min - self.location.x)
+                         + self.pos_cos * (direction_vector_y_min - self.location.y) + self.location.y)
+        low_max = Point(self.rev_cos * (direction_vector_x_max - self.location.x)
+                        - self.rev_sin * (direction_vector_y_max - self.location.y) + self.location.x,
+                        self.rev_sin * (direction_vector_x_max - self.location.x)
+                        + self.rev_cos * (direction_vector_y_max - self.location.y) + self.location.y)
+        high_max = Point(self.pos_cos * (direction_vector_x_max - self.location.x)
+                         - self.pos_sin * (direction_vector_y_max - self.location.y) + self.location.x,
+                         self.pos_sin * (direction_vector_x_max - self.location.x)
+                         + self.pos_cos * (direction_vector_y_max - self.location.y) + self.location.y)
+
+        return Polygon(points=[low_min, dir_point_min, high_min, high_max, dir_point_max, low_max],
                        color="salmon")
 
     def roll_if_active(self, time: str) -> None:
@@ -140,20 +217,40 @@ class OTH:
                 self.active = True
         else:
             raise NotImplementedError(f"Time {time} not implemented.")
-        pass
 
-    def remove_from_plot(self) -> None:
+        if not self.active:
+            self.remove_range_band_from_plot()
+
+    def add_to_plot(self):
+        """
+        Adds just the BASE stations to the plot
+        :return:
+        """
+        self.location.add_point_to_plot(constants.axes_plot, color=self.color, marker="8", plot_text=False,
+                                        marker_edge_width=2, markersize=constants.WORLD_MARKER_SIZE - 4)
+
+    def remove_range_band_from_plot(self) -> None:
         if not constants.PLOTTING_MODE:
             return
 
         if self.range_band_plot is not None:
             self.range_band_plot.remove()
+            self.range_band_plot = None
 
-    def plot_range_band(self) -> None:
+    def update_range_band_plot(self) -> None:
         if not constants.PLOTTING_MODE:
             return
 
-        self.remove_from_plot()
-
+        self.remove_range_band_from_plot()
         if self.scanned_polygon is not None:
-            self.range_band_plot = self.scanned_polygon.add_polygon_to_plot(constants.axes_plot, opacity=0.3)
+            self.add_range_band_to_plot()
+
+    def add_range_band_to_plot(self):
+        if self.color is None:
+            self.range_band_plot = constants.axes_plot.add_patch(
+                matplotlib.patches.Polygon([(p.x, p.y) for p in self.scanned_polygon.points],
+                                           color="grey", closed=True, alpha=constants.RANGE_BAND_OPACITY))
+        else:
+            self.range_band_plot = constants.axes_plot.add_patch(
+                matplotlib.patches.Polygon([(p.x, p.y) for p in self.scanned_polygon.points],
+                                           closed=True, color=self.color, alpha=constants.RANGE_BAND_OPACITY))

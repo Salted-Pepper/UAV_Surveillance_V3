@@ -22,7 +22,7 @@ import constants
 import constants_coords
 from polygons import Polygon
 from receptors import ReceptorGrid
-from managers import MerchantManager, USManager, TaiwanManager, JapanManager, UAVManager
+from managers import MerchantManager, USManager, TaiwanManager, JapanManager, UAVManager, OTHManager
 
 date = datetime.date.today()
 
@@ -59,6 +59,7 @@ class World:
         self.y_min = None
         self.y_max = None
 
+        self.UAV_manager = None
         self.managers = None
         self.initiate_managers()
 
@@ -73,6 +74,7 @@ class World:
         self.splits_per_step = int(np.ceil(constants.UAV_MOVEMENT_SPLITS_P_H * self.time_delta))
         print(f"SPLITS PER TIME DELTA SET AT {self.splits_per_step}")
         self.world_time = 0
+        self.time_of_day = 0
 
         # Statistics
         self.current_vessels = []
@@ -128,11 +130,14 @@ class World:
         self.receptor_grid = ReceptorGrid(self.landmasses + [self.china_polygon], self)
 
     def initiate_managers(self) -> None:
-        self.managers = [UAVManager(),
+        self.UAV_manager = UAVManager()
+
+        self.managers = [self.UAV_manager,
                          MerchantManager(),
                          USManager(),
                          TaiwanManager(),
                          JapanManager(),
+                         OTHManager()
                          ]
 
     def plot_world(self, include_receptors=False) -> None:
@@ -180,12 +185,13 @@ class World:
     def time_step(self) -> None:
         print(f"Starting iteration {self.world_time: .3f}")
         self.world_time += self.time_delta
+        self.time_of_day = self.world_time % 24
 
         self.update_weather_conditions()
 
-        for management in self.managers:
-            logger.debug(f"{management} is working...")
-            management.manage_agents()
+        for manager in self.managers:
+            logger.debug(f"{manager} is working...")
+            manager.manage_agents()
 
         t_0 = time.perf_counter()
         self.receptor_grid.depreciate_pheromones()

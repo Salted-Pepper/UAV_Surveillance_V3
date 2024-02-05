@@ -113,6 +113,9 @@ class Ship(Agent):
         for uav in self.trailing_agents:
             uav.perceive_ship_sunk()
 
+        for agent in self.guarding_agents:
+            agent.stop_guarding()
+
         self.destroyed = True
         self.route = None
         self.remove_from_plot()
@@ -284,6 +287,7 @@ class Escort(Ship):
 
     def stop_guarding(self):
         self.guarding_target = None
+        self.patrolling = True
 
     def activate(self):
 
@@ -337,7 +341,7 @@ class Escort(Ship):
         merchant_manager = [manager for manager in constants.world.managers if manager.name == "MerchantManager"][0]
         merchants = [agent for agent in merchant_manager.agents
                      if len(agent.guarding_agents) == 0]
-        print(f"{self} trying to select guarding target out of {[str(m) for m in merchant_manager.agents]}")
+        # print(f"{self} trying to select guarding target out of {[str(m) for m in merchant_manager.agents]}")
 
         # TODO: refine how a target is selected - for now just closest unguarded merchant
         # TODO: Also allow ships to "trade" who is guarding, let the closest willing ship go first

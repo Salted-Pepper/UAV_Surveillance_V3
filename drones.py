@@ -93,7 +93,7 @@ class Drone(Agent):
         """
         self.maintenance_time = 3.4 + 0.68 * self.endurance
 
-    def move(self, distance_to_travel=None):
+    def move(self, distance_to_travel=None) -> None:
         """
         Make the move for the current time step.
         Depends on if they are travelling to a destination (base/start point), patrolling, or trailing.
@@ -130,7 +130,7 @@ class Drone(Agent):
                 return
 
         # Case 3: Following a route
-        if self.routing_to_patrol or self.routing_to_base or self.trailing:
+        if self.routing_to_patrol or self.routing_to_base or self.trailing or self.searching_area:
             t_0 = time.perf_counter()
 
             # Case 3.1: Trailing a ship - update route to new ship location before chasing
@@ -158,7 +158,7 @@ class Drone(Agent):
         if constants.DEBUG_MODE:
             self.debug()
 
-    def activate(self, to_patrol=True, target=None):
+    def activate(self, to_patrol=True, target=None) -> None:
         """
         Launch a drone to either a target or to patrol an area
         :param to_patrol:
@@ -177,13 +177,33 @@ class Drone(Agent):
             self.routing_to_patrol = True
             self.move()
         elif target is not None:
-            start_location = target.location
+            if isinstance(target, Point):
+                start_location = target
+            else:
+                start_location = target.location
+
             logger.debug(f"Launching UAV {self.uav_id} to {target}")
             self.generate_route(start_location)
             self.trailing = True
             self.move()
 
-    def return_to_base(self):
+    def search_location(self, location) -> None:
+
+        # TODO: Redo standard route creation, instead make a search pattern
+        if self.stationed:
+            self.activate(target=location)
+        else:
+            self.generate_route(destination=location)
+
+        self.routing_to_patrol = True
+
+        if self.trailing or self.routing_to_base or self.under_maintenance:
+            raise PermissionError(f"UAV {self} selected to search location while "
+                                  f"{self.trailing=} and {self.routing_to_base=} and {self.under_maintenance}")
+
+        self.patrolling = False
+
+    def return_to_base(self) -> None:
         logger.debug(f"UAV {self.uav_id} is forced to return to base.")
         self.routing_to_patrol = False
 
@@ -193,7 +213,7 @@ class Drone(Agent):
         self.generate_route(self.base.location)
         self.routing_to_base = True
 
-    def land(self):
+    def land(self) -> None:
         logger.debug(f"UAV {self.uav_id} landed at {self.location} - starting maintenance")
 
         self.stationed = True
@@ -288,7 +308,6 @@ class Drone(Agent):
             weather = 0.40
 
         height = 10  # Assumed to be 10km
-        print(f"{agent=}, {height=}, {agent.RCS=}, {weather=}")
         top_frac_exp = constants.K_CONSTANT * height * agent.RCS * weather
         if distance < 1:
             distance = 1
@@ -358,7 +377,8 @@ class Drone(Agent):
     def call_in_support(self):
         options = []
         for uav in constants.world.current_airborne_drones:
-            if uav.ammunition > 0 and uav.reach_and_return(self.located_agent.location) and not uav.routing_to_base:
+            if (uav.ammunition > 0 and uav.reach_and_return(self.located_agent.location)
+                    and not uav.routing_to_base and not uav.trailing):
                 options.append([uav, self.location.distance_to_point(uav.location)])
 
         if len(options) == 0:

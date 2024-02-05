@@ -58,6 +58,7 @@ class Agent:
         self.stationed = True
         self.destroyed = False
         self.left_world = False
+        self.searching_area = False
 
         self.routing_to_patrol = False
         self.patrolling = False
@@ -176,6 +177,7 @@ class Agent:
         """
         Course of action for agent to take after stopping trailing
         """
+        self.patrolling = True
         self.move(self.distance_to_travel)
 
     def remove_trailing_agents(self, reason: str) -> None:

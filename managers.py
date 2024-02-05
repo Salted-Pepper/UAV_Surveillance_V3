@@ -2,6 +2,7 @@ from agent import Agent
 from ships import TaiwanEscort, Merchant
 from base import Harbour, Airbase
 from drones import Drone, DroneType
+from oth_scanners import OTH
 
 from points import Point
 
@@ -133,6 +134,29 @@ class AgentManager:
         return np.random.choice(self.bases)
 
 
+class OTHManager(AgentManager):
+    """
+    Chinese OTH Manager
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.team = 2
+
+        self.initiate_bases()
+
+    def initiate_bases(self):
+        self.bases = [OTH(location=Point(112.70425, 32.33893),
+                          direction_point=Point(113.70425, 31.33893)),
+                      OTH(location=Point(111.44, 42.73),
+                          direction_point=Point(112.44, 41.73))
+                      ]
+
+    def manage_agents(self):
+        for oth in self.bases:
+            oth.perform_scan()
+
+
 class UAVManager(AgentManager):
     """
     Chinese UAV Manager
@@ -175,6 +199,38 @@ class UAVManager(AgentManager):
                 drone_type.drones.append(new_drone)
 
             drone_type.calculate_utilization_rate()
+
+    def send_patrol_to_location(self, location: Point) -> bool:
+        """
+        Sends a patrol to a designated location
+        :param location:
+        :return: Bool on whether successfully sent out a patrol unit
+        """
+        print(f"Sending Patrol to locations")
+
+        # TODO: Optimize selection of UAV agent efficiency - other filter conditions (endurance? type?)
+        #  - Currently only considers stationed drones if no suitable live candidates
+        available_drones = [agent for agent in self.agents
+                            if not agent.stationed
+                            and not agent.routing_to_base
+                            and not agent.trailing
+                            and agent.reach_and_return(location)]
+        print(f"Created list of candidate drones {len(available_drones)}")
+        if len(available_drones) == 0:
+            available_drones = [agent for agent in self.agents
+                                if agent.stationed
+                                and not agent.under_maintenance
+                                and not agent.routing_to_base
+                                and not agent.trailing
+                                and agent.reach_and_return(location)]
+            if len(available_drones) == 0:
+                return False
+
+        available_drones = [[agent, agent.location.distance_to_point(location)] for agent in available_drones]
+        selected_support = min(available_drones, key=lambda x: x[1])[0]
+
+        selected_support.search_location(location)
+        return True
 
 
 class MerchantManager(AgentManager):
