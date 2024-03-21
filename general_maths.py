@@ -185,28 +185,39 @@ def do_intersect(p1: object, q1: object, p2: object, q2: object) -> bool:
         return False
 
 
-def check_if_lines_intersect(line_l: list, line_k: list, except_end_points=True) -> bool:
+def check_if_path_and_polygon_intersect(polygon_line: list, path_line: list, except_end_points=True) -> bool:
     """
-    Check if two lines intersect.
+    Check if a polygon and a path line intersect.
+    The path line endpoints are allowed to be on the polygon_line, but the reverse is not allowed.
     :param except_end_points: Include or except endpoints in the check
-    :param line_l:
-    :param line_k:
+    :param polygon_line:
+    :param path_line:
     :return:
     """
 
-    line_1 = shapely.geometry.LineString([[line_k[0].x, line_k[0].y], [line_k[1].x, line_k[1].y]])
-    line_2 = shapely.geometry.LineString([[line_l[0].x, line_l[0].y], [line_l[1].x, line_l[1].y]])
+    geo_path_line = shapely.geometry.LineString([[path_line[0].x, path_line[0].y], [path_line[1].x, path_line[1].y]])
+    geo_poly_line = shapely.geometry.LineString([[polygon_line[0].x, polygon_line[0].y],
+                                                 [polygon_line[1].x, polygon_line[1].y]])
     if except_end_points:
         # Except if the line shares an endpoint - passing through 2 points on the polygon is handled in the polygon
-        if line_k[0] == line_l[0] or line_k[1] == line_l[0] or line_k[0] == line_l[1] or line_k[1] == line_l[1]:
+        if (path_line[0] == polygon_line[0]
+                or path_line[1] == polygon_line[0]
+                or path_line[0] == polygon_line[1]
+                or path_line[1] == polygon_line[1]):
             return False
         # case if point is exactly on the line
-        elif (check_if_point_on_line(point=shapely.geometry.Point(line_k[0].x, line_k[0].y), line=line_2) or
-              check_if_point_on_line(point=shapely.geometry.Point(line_k[1].x, line_k[1].y), line=line_2) or
-              check_if_point_on_line(point=shapely.geometry.Point(line_l[0].x, line_l[0].y), line=line_1) or
-              check_if_point_on_line(point=shapely.geometry.Point(line_l[1].x, line_l[1].y), line=line_1)):
+        elif (check_if_point_on_line(point=shapely.geometry.Point(path_line[0].x, path_line[0].y),
+                                     line=geo_poly_line)
+              or check_if_point_on_line(point=shapely.geometry.Point(path_line[1].x, path_line[1].y),
+                                        line=geo_poly_line)
+              # WE DO NOT WANT TO EXCEPT IT WHEN THE POLYGON LINE ENDPOINT IS ON THE PATH LINE
+              # or check_if_point_on_line(point=shapely.geometry.Point(polygon_line[0].x, polygon_line[0].y),
+              #                           line=geo_path_line)
+              # or check_if_point_on_line(point=shapely.geometry.Point(polygon_line[1].x, polygon_line[1].y),
+              #                           line=geo_path_line)
+        ):
             return False
-    intersect = line_1.intersects(line_2)
+    intersect = geo_path_line.intersects(geo_poly_line)
     return intersect
 
 

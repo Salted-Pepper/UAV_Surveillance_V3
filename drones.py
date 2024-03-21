@@ -109,10 +109,10 @@ class Drone(Agent):
 
         # Case 1: Check if the UAV has to return to base if not already
         if not self.routing_to_base:
+            logger.debug(f"Checking before can_continue function for {self.uav_id}")
+            if constants.DEBUG_MODE:
+                self.debug()
             if not self.can_continue():
-                logger.debug(f"Checking after can_continue function for {self.uav_id}")
-                if constants.DEBUG_MODE:
-                    self.debug()
                 self.return_to_base()
                 self.time_spent_from_base += constants.world.time_delta
                 t_1 = time.perf_counter()
@@ -216,6 +216,7 @@ class Drone(Agent):
     def land(self) -> None:
         logger.debug(f"UAV {self.uav_id} landed at {self.location} - starting maintenance")
 
+        self.engaged_in_combat = False
         self.stationed = True
         self.update_plot()
 
@@ -319,7 +320,7 @@ class Drone(Agent):
         active_hostile_ships = [agent
                                 for manager in constants.world.managers
                                 if manager.team != self.team
-                                for agent in manager.agents]
+                                for agent in manager.agents if (agent.left_world is False and agent.stationed is False)]
         # [agent
         # for manager in constants.world.managers
         # for agent in manager.agents
@@ -365,6 +366,7 @@ class Drone(Agent):
         :return:
         """
         logger.debug(f"UAV {self.uav_id} attacking {self.located_agent.ship_id}")
+        self.engaged_in_combat = True
         if self.ammunition == 0:
             raise ValueError(f"UAV {self.uav_id} attempting to attack without available ammunition")
 

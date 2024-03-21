@@ -4,7 +4,7 @@ from points import Point
 TAIWAN_COLOR = "yellowgreen"
 JAPAN_COLOR = "white"
 CHINA_COLOR = "indianred"
-
+OTHER_COLOR = "grey"
 
 TAIWAN_POINTS = [Point(21.93, 120.71, lon_lat=True), Point(21.90, 120.86, lon_lat=True),
                  Point(22.29, 120.89, lon_lat=True), Point(22.75, 121.17, lon_lat=True),
@@ -78,6 +78,45 @@ YAKUSHIMA_POINTS = [Point(30.382, 130.375, lon_lat=True), Point(30.450, 130.509,
 TANEGASHIMA_POINTS = [Point(30.362, 130.857, lon_lat=True), Point(30.662, 130.945, lon_lat=True),
                       Point(30.832, 131.059, lon_lat=True), Point(30.603, 131.053, lon_lat=True)]
 
+SOUTH_KOREA_POINTS = [Point(34.382635296628266, 126.1105936433172, lon_lat=True),
+                      Point(34.283897291817006, 126.72869474423958, lon_lat=True),
+                      Point(34.8147862758336, 128.44754879324768, lon_lat=True),
+                      Point(34.666106922426835, 128.6397890487289, lon_lat=True),
+                      Point(35.055818803797955, 128.77548805259792, lon_lat=True),
+                      Point(35.06507513295652, 129.0129613093688, lon_lat=True),
+                      Point(36.049414003089616, 129.60099032613473, lon_lat=True),
+                      Point(36.12252266586377, 129.39744182033112, lon_lat=True),
+                      Point(37.22897033265078, 129.35220881904146, lon_lat=True),
+                      Point(38.60276796020003, 128.3570827906683, lon_lat=True),
+                      Point(37.740443375169086, 126.16328222811846, lon_lat=True),
+                      Point(36.97643996172249, 126.67215349262747, lon_lat=True),
+                      Point(36.777433290343886, 126.1293574771512, lon_lat=True),
+                      Point(35.627722046101404, 126.49122148746869, lon_lat=True),
+                      Point(34.33993969567544, 126.1293574771512, lon_lat=True),
+                      ]
+
+NORTH_KOREA_POINTS = [Point(37.713611134128875, 126.15197395789085, lon_lat=True),
+                      Point(38.567410131475896, 128.39100752173036, lon_lat=True),
+                      Point(39.22746826972953, 127.4184981196537, lon_lat=True),
+                      Point(40.85492641510266, 129.7479976860726, lon_lat=True),
+                      Point(41.51024592280302, 129.6349151828484, lon_lat=True),
+                      Point(42.30134275308864, 130.65265771186637, lon_lat=True),
+                      Point(43.02478186744697, 129.97416269252105, lon_lat=True),
+                      Point(39.81192015777447, 124.12779727582893, lon_lat=True),
+                      Point(39.50722297163861, 125.2925470590384, lon_lat=True),
+                      Point(38.10617579665901, 124.68190154162761, lon_lat=True),
+                      Point(37.740443461568674, 125.37170481129533, lon_lat=True),
+                      Point(37.731500450396815, 126.1180493325752, lon_lat=True),
+                      ]
+
+JEJUDO_POINTS = [Point(33.522375907040484, 126.90759969506134, lon_lat=True),
+                 Point(33.299521222070986, 126.85218991209356, lon_lat=True),
+                 Point(33.299521222070986, 126.85218991209356, lon_lat=True),
+                 Point(33.32898761892358, 126.17216075748912, lon_lat=True),
+                 Point(33.4641845509088, 126.31246328374174, lon_lat=True),
+                 Point(33.568364256062075, 126.81228862632128, lon_lat=True)
+                 ]
+
 JAPAN_POINTS = [Point(30.9983546671584, 130.66796919843003, lon_lat=True),
                 Point(31.383794150026738, 131.41374581831766, lon_lat=True),
                 Point(32.79875267280593, 132.00415230906208, lon_lat=True),
@@ -148,6 +187,36 @@ CHINA_POINTS = [Point(18.50888529440916, 108.69305618407309, lon_lat=True),
                 Point(40.46630175032113, 122.18529570088104, lon_lat=True),
                 Point(39.764328544492344, 121.33141030770977, lon_lat=True),
                 Point(39.89547663058136, 124.25596777932132, lon_lat=True),
-                Point(39.89547663058136, 124.25596777932132, lon_lat=True),
-                Point(41.89547663058136, 124.25596777932132, lon_lat=True),
+                Point(42.97046854532111, 129.9951987981382, lon_lat=True),
+                Point(43.53289325051917, 117.98130022180558, lon_lat=True),
                 Point(41.89547663058136, 108.69305618407309, lon_lat=True),]
+
+
+# ----------------------------- ZONES -----------------------------
+# TODO: Define Zones point-wise
+
+EXCLUSION_ZONE_POINTS = []
+
+# China
+CHINA_ADIZ = []
+
+CHINA_TERRITORIAL = []
+
+CHINA_CONTIGUOUS = []
+
+CHINA_EEZ = []
+
+# Taiwan
+TAIWAN_ADIZ = []
+
+TAIWAN_TERRITORIAL = []
+
+# Japan
+
+JAPAN_ADIZ = []
+
+JAPAN_TERRITORIAL = []
+
+JAPAN_CONTIGUOUS = []
+
+JAPAN_EEZ = []

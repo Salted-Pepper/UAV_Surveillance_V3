@@ -50,8 +50,10 @@ class World:
 
         # Create Geography
         self.landmasses = []
+        self.zones = []
         self.china_polygon = None
         self.initiate_land_masses()
+        self.initiate_zones()
 
         self.x_min = None
         self.x_max = None
@@ -121,10 +123,41 @@ class World:
                                    color=constants_coords.JAPAN_COLOR),
                            Polygon(name="japan", points=constants_coords.JAPAN_POINTS,
                                    color=constants_coords.JAPAN_COLOR),
+                           Polygon(name="s_korea", points=constants_coords.SOUTH_KOREA_POINTS,
+                                   color=constants_coords.OTHER_COLOR),
+                           Polygon(name="n_korea", points=constants_coords.NORTH_KOREA_POINTS,
+                                   color=constants_coords.OTHER_COLOR),
+                           Polygon(name="jejudo", points=constants_coords.JEJUDO_POINTS,
+                                   color=constants_coords.OTHER_COLOR)
                            ]
 
         self.china_polygon = Polygon(name="china", points=constants_coords.CHINA_POINTS,
                                      color=constants_coords.CHINA_COLOR)
+
+    def initiate_zones(self):
+        self.zones = [Polygon(name="exclusion_zone",
+                              points=constants_coords.EXCLUSION_ZONE_POINTS),
+                      Polygon(name="china_ADIZ",
+                              points=constants_coords.CHINA_ADIZ),
+                      Polygon(name="china_territorial",
+                              points=constants_coords.CHINA_TERRITORIAL),
+                      Polygon(name='china_contiguous',
+                              points=constants_coords.CHINA_CONTIGUOUS),
+                      Polygon(name='china_EEZ',
+                              points=constants_coords.CHINA_EEZ),
+                      Polygon(name='taiwan_ADIZ',
+                              points=constants_coords.TAIWAN_ADIZ),
+                      Polygon(name='taiwan_territorial',
+                              points=constants_coords.TAIWAN_TERRITORIAL),
+                      Polygon(name='japan_ADIZ',
+                              points=constants_coords.JAPAN_ADIZ),
+                      Polygon(name='japan_territorial',
+                              points=constants_coords.JAPAN_TERRITORIAL),
+                      Polygon(name='japan_contiguous',
+                              points=constants_coords.JAPAN_CONTIGUOUS),
+                      Polygon(name='japan_EEZ',
+                              points=constants_coords.JAPAN_EEZ)
+                      ]
 
     def initiate_receptor_grid(self) -> None:
         self.receptor_grid = ReceptorGrid(self.landmasses + [self.china_polygon], self)

@@ -65,6 +65,8 @@ class Agent:
         self.pheromone_spread = None
         self.direction = "north"  # Direction facing when patrolling to make subsequent moves
 
+        # AGENT INTERACTIONS
+        self.engaged_in_combat = False
         self.trailing = False
         self.located_agent = None
         self.detected = False
@@ -105,13 +107,29 @@ class Agent:
         self.next_point = self.route.points[1]
         self.remaining_points = self.route.points[2:]
 
-    def activate(self):
+    def activate(self, mission=None):
         """
         Function to be overwritten on lower level -
         Activation is what the agent will do once it is entered into the world.
         :return:
         """
         raise NotImplementedError("Function ACTIVATE not defined on AGENT level.")
+
+    def in_zone(self, name: str):
+        """
+        Check if the agent is in a defined zone
+        :param name: Name of the zone
+        :return:
+        """
+        for zone in constants.world.zones:
+            if zone.name == name:
+                if zone.check_if_contains_point(self.location):
+                    return True
+                else:
+                    return False
+
+        raise NotImplementedError(f"Zone {name} does not exist in {constants.world.zones}")
+
 
     def update_trail_route(self) -> None:
         """
@@ -541,7 +559,10 @@ class Agent:
             return
         else:
             self.routing_to_base = True
-            self.generate_route(destination=self.base)
+            if isinstance(self.base, Point):
+                self.generate_route(destination=self.base)
+            else:
+                self.generate_route(destination=self.base.location)
 
     def remove_from_plot(self):
         if not constants.PLOTTING_MODE:

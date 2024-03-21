@@ -35,7 +35,7 @@ class Ship(Agent):
 
         # ---- Ship Specific Status -----
         self.entry_point = None
-        self.enter_world_time = None
+        # self.enter_world_time = None
         self.boarded = False
         self.CTL = False
         self.damage_penalty = 0
@@ -47,7 +47,7 @@ class Ship(Agent):
 
     def enter_world(self) -> None:
         self.stationed = False
-        self.enter_world_time = constants.world.world_time
+        # self.enter_world_time = constants.world.world_time
         self.generate_ship_entry_point()
         self.generate_route(self.base.location)
 
@@ -138,9 +138,9 @@ class Merchant(Ship):
 
         self.radius = 0
 
-        self.initiate_parameters()
+        self.initiate_model_parameters()
 
-    def initiate_parameters(self) -> None:
+    def initiate_model_parameters(self) -> None:
         if self.model == "Cargo":
             self.speed = constants.CARGO_AVERAGE_SPEED
             self.cargo_load = constants.CARGO_AVERAGE_LOAD
@@ -159,7 +159,7 @@ class Merchant(Ship):
     def move(self, distance_to_travel=None):
         self.move_through_route(distance_to_travel)
 
-    def activate(self):
+    def activate(self, mission=None):
         self.stationed = False
         self.leaving_world = True
         self.generate_route(self.entry_point)
@@ -257,18 +257,18 @@ class Escort(Ship):
         self.armed = None
         self.max_speed = None
         self.contains_helicopter = None
-        # TODO: Implement Individual maint time for Escorts
+        # TODO: Implement Individual maintenance time for Escorts
         self.maintenance_time = constants.ESCORT_MAINTENANCE_TIME
 
         self.speed = constants.CRUISING_SPEED
 
         self.guarding_target = None
-        self.behaviour = None
+        self.mission = None
 
-        self.initiate_model()
+        self.initiate_model_parameters()
 
-    def initiate_model(self):
-        for blueprint in model_info.ESCORT_MODELS:
+    def initiate_model_parameters(self):
+        for blueprint in model_info.SHIP_MODELS:
             if blueprint['name'] == self.model:
                 self.length = blueprint['length']
                 self.displacement = blueprint['displacement']
@@ -278,7 +278,7 @@ class Escort(Ship):
                 self.endurance = blueprint['endurance']
 
     def make_move(self):
-        raise NotImplementedError(f"Behaviour {self.behaviour} not implemented for baseclass ESCORT.")
+        raise NotImplementedError(f"Behaviour {self.mission} not implemented for baseclass ESCORT.")
 
     def start_guarding(self, agent):
         agent.guarding_agents.append(self)
@@ -289,21 +289,26 @@ class Escort(Ship):
         self.guarding_target = None
         self.patrolling = True
 
-    def activate(self):
-
+    def activate(self, mission=None):
+        """
+        Make the escort start a mission
+        :param mission:
+        :return:
+        """
         self.stationed = False
 
-        # TODO: determine how to set behaviour mode - for now sample random one
-        behaviours = constants.taiwan_escort_behaviour
-        self.behaviour = random.choices(list(behaviours.keys()),
-                                        [behaviours[behaviour]
-                                         for behaviour in behaviours.keys()]
-                                        )[0]
+        # TODO: determine how to set mission mode - for now sample random one
+        if mission is None:
+            behaviours = constants.taiwan_escort_behaviour
+            self.mission = random.choices(list(behaviours.keys()),
+                                          [behaviours[behaviour]
+                                           for behaviour in behaviours.keys()]
+                                          )[0]
 
-        if self.behaviour == "patrol":
+        if self.mission == "patrol":
             self.generate_route(self.generate_patrol_location())
             self.routing_to_patrol = True
-        elif self.behaviour == "guard":
+        elif self.mission == "guard":
             found_target = self.select_guarding_target()
             if not found_target:
                 self.patrolling = True
@@ -424,6 +429,13 @@ class JapanEscort(Escort):
         Make next move based on behaviour and rules.
         :return:
         """
+
+        if (not self.located_agent.engaged_in_combat
+                and not self.located_agent.in_zone("exclusion_zone")
+                and not self.located_agent.is_boarding):
+            # TODO: Stop all actions towards this agent?
+            self.stop_trailing("Located agent no longer a valid target.")
+            return
         rule = constants.japan_engagement
         if rule == "never attack":
             pass
@@ -467,7 +479,7 @@ class TaiwanEscort(Escort):
         self.update_plot()
 
     def engage_agent(self):
-        # TODO: Attack Taiwanese attack capabilities
+        # TODO: Taiwanese attack capabilities
         pass
 
     def move(self, distance_to_travel=None):
@@ -480,13 +492,13 @@ class TaiwanEscort(Escort):
                     self.call_action_on_agent()
                     self.distance_to_travel = 0
 
-            if self.behaviour == "patrol":
+            if self.mission == "patrol":
                 if self.routing_to_patrol:
                     self.move_through_route()
                 else:
                     self.make_next_patrol_move()
 
-            elif self.behaviour == "guard":
+            elif self.mission == "guard":
                 if self.guarding_target is not None:
                     self.generate_route(self.guarding_target.location)
                     self.move_through_route()
@@ -497,7 +509,7 @@ class TaiwanEscort(Escort):
                         self.make_next_patrol_move()
 
             else:
-                raise NotImplementedError(f"Behaviour {self.behaviour} not implemented!")
+                raise NotImplementedError(f"Behaviour {self.mission} not implemented!")
 
     def roll_detection_check(self, own_location: Point, agent_location: Point, distance: float) -> float:
         # TODO: Implement proper escort detection check

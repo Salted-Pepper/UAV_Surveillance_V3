@@ -91,11 +91,11 @@ class Polygon:
             #              f"p1 {p_1}: {self.check_if_contains_point(p_1)}, "
             #              f"p2 {p_2}: {self.check_if_contains_point(p_2)}")
             return True
-        # ------------------ CASE 1.2 BOTH POINTS ARE THE SAME
+        # ------------------ CASE 1.2 BOTH POINTS ARE THE SAME POINT
         elif p_1 is p_2:
             # logger.debug(f"LINE CHECK: CASE 1.2")
             return False
-        # ------------------ CASE 1.3 ONE POINT IS A POLYGON POINT, OTHER IS ON AN EDGE OF THE POLYGON
+        # ------------------ CASE 1.3 ONE POINT IS A POLYGON POINT, OTHER IS ON AN EDGE OF THE SAME POLYGON
         elif (p_1 in self.points and self.point_is_on_edge(p_2)) or (self.point_is_on_edge(p_1) and p_2 in self.points):
             # logger.debug(f"LINE CHECK: CASE 1.3")
             # Check if it's on one edge - if they are on the same edge, it does not violate -
@@ -145,12 +145,12 @@ class Polygon:
                 return True
             return False
         else:
-            # --------------------- CASE 3: WE CROSS THE POLYGON
+            # --------------------- CASE 3: THE LINE CROSSES THE POLYGON
             # logger.debug(f"LINE CHECK: CASE 3")
             for a, b in zip(self.points, self.points[1:] + [self.points[0]]):
                 # logger.debug(f"Checking line from {a} to {b}: {gm.check_if_lines_intersect([a, b], [p_1, p_2])}")
                 # Check if there is any line that the line intersects
-                if gm.check_if_lines_intersect([a, b], [p_1, p_2]):
+                if gm.check_if_path_and_polygon_intersect([a, b], [p_1, p_2]):
                     # logger.debug(f"Intersection between line ({a}, {b}) and line ({p_1}, {p_2})")
                     return True
 
