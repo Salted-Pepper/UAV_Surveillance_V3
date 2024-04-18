@@ -213,6 +213,11 @@ class Merchant(Ship):
             self.leaving_world = True
             self.generate_route(destination=self.entry_point)
 
+    def successful_boarding(self):
+        print(f"{self} is boarded.")
+        self.leaving_world = True
+        self.generate_route(destination=constants.CHINESE_BOARDING_DESTINATION)
+
     def reached_end_of_route(self) -> None:
         """
         Set of instructions to follow once the end of agent route is reached.
@@ -261,6 +266,16 @@ class Escort(Ship):
         self.maintenance_time = constants.ESCORT_MAINTENANCE_TIME
 
         self.speed = constants.CRUISING_SPEED
+
+        # TODO: Implement these 6 parameters (updating time - is it model based? World constant?
+        self.air_detection_range = None
+        self.surface_detection_range = None
+        self.submarine_detection_range = None
+
+        self.air_attack_range = None
+        self.surface_attack_range = None
+        self.submarine_attack_range = None
+        # ---------------------------------
 
         self.guarding_target = None
         self.mission = None
@@ -362,7 +377,7 @@ class Escort(Ship):
         active_hostile_agents = [agent
                                  for manager in constants.world.managers
                                  for agent in manager.agents
-                                 if agent.team != self.team]
+                                 if agent.team != self.team and not agent.left_world]
         for agent in active_hostile_agents:
             detection_probabilities = []
 

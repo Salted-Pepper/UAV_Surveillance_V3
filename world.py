@@ -22,7 +22,7 @@ import constants
 import constants_coords
 from polygons import Polygon
 from receptors import ReceptorGrid
-from managers import MerchantManager, USManager, TaiwanManager, JapanManager, UAVManager, OTHManager
+from managers import MerchantManager, USManager, TaiwanManager, JapanManager, UAVManager, OTHManager, ChinaNavyManager
 
 date = datetime.date.today()
 
@@ -62,6 +62,7 @@ class World:
         self.y_max = None
 
         self.UAV_manager = None
+        self.china_navy_manager = None
         self.managers = None
         self.initiate_managers()
 
@@ -164,8 +165,9 @@ class World:
 
     def initiate_managers(self) -> None:
         self.UAV_manager = UAVManager()
-
+        self.china_navy_manager = ChinaNavyManager()
         self.managers = [self.UAV_manager,
+                         self.china_navy_manager,
                          MerchantManager(),
                          USManager(),
                          TaiwanManager(),

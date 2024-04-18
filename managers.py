@@ -142,6 +142,7 @@ class OTHManager(AgentManager):
     def __init__(self):
         super().__init__()
         self.team = 2
+        self.active = False
 
         self.initiate_bases()
 
@@ -153,8 +154,46 @@ class OTHManager(AgentManager):
                       ]
 
     def manage_agents(self):
+
+        if round(constants.world.time_of_day, 3) == 7:
+            self.roll_if_active(time="AM")
+
+        elif round(constants.world.time_of_day, 3) == 19:
+            self.roll_if_active(time="PM")
+
+        if not self.active:
+            return
         for oth in self.bases:
             oth.perform_scan()
+
+    def roll_if_active(self, time: str) -> None:
+        """
+        Check if the OTH are active or not for the upcoming 12h block.
+        Checks are done at 7am and 7pm world time.
+
+        At 7am, 5% that conditions are too bad - no checks
+        At 7pm, 50% chance that no OTH checks are made
+        :param time: String either 'AM' or 'PM'
+        :return:
+        """
+        random_value = random.uniform(0, 1)
+
+        if time == "AM":
+            if random_value <= 0.05:
+                self.active = False
+            else:
+                self.active = True
+        elif time == "PM":
+            if random_value <= 0.5:
+                self.active = False
+            else:
+                self.active = True
+        else:
+            raise NotImplementedError(f"Time {time} not implemented.")
+
+        if not self.active:
+            for oth in self.agents:
+                oth.remove_range_band_from_plot()
 
 
 class UAVManager(AgentManager):
@@ -231,6 +270,29 @@ class UAVManager(AgentManager):
 
         selected_support.search_location(location)
         return True
+
+
+class ChinaNavyManager(AgentManager):
+    """
+    Chinese Navy Manager
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.team = 2
+        self.drone_types = []
+
+        self.initiate_bases()
+        self.calculate_utilization_rates()
+
+    def __str__(self):
+        return "Chinese Navy Manager"
+
+    def initiate_bases(self):
+        # TODO: Create proper Chinese harbour
+        chinese_harbour = Harbour(name='temp_harbour', location=Point(199.817, 26.122))
+        constants.CHINESE_BOARDING_DESTINATION = chinese_harbour
+        self.bases = [chinese_harbour]
 
 
 class MerchantManager(AgentManager):
@@ -364,36 +426,6 @@ class TaiwanManager(AgentManager):
 
     def initiate_agents(self) -> None:
         self.agents = [TaiwanEscort(model="Zhaotou",
-                                    base=self.select_random_base(),
-                                    obstacles=constants.world.landmasses),
-                       TaiwanEscort(model="Zhaotou",
-                                    base=self.select_random_base(),
-                                    obstacles=constants.world.landmasses),
-                       TaiwanEscort(model="Zhaotou",
-                                    base=self.select_random_base(),
-                                    obstacles=constants.world.landmasses),
-                       TaiwanEscort(model="Zhaotou",
-                                    base=self.select_random_base(),
-                                    obstacles=constants.world.landmasses),
-                       TaiwanEscort(model="Zhaotou",
-                                    base=self.select_random_base(),
-                                    obstacles=constants.world.landmasses),
-                       TaiwanEscort(model="Zhaotou",
-                                    base=self.select_random_base(),
-                                    obstacles=constants.world.landmasses),
-                       TaiwanEscort(model="Zhaotou",
-                                    base=self.select_random_base(),
-                                    obstacles=constants.world.landmasses),
-                       TaiwanEscort(model="Zhaotou",
-                                    base=self.select_random_base(),
-                                    obstacles=constants.world.landmasses),
-                       TaiwanEscort(model="Zhaotou",
-                                    base=self.select_random_base(),
-                                    obstacles=constants.world.landmasses),
-                       TaiwanEscort(model="Zhaotou",
-                                    base=self.select_random_base(),
-                                    obstacles=constants.world.landmasses),
-                       TaiwanEscort(model="Zhaotou",
                                     base=self.select_random_base(),
                                     obstacles=constants.world.landmasses),
                        TaiwanEscort(model="Zhaotou",

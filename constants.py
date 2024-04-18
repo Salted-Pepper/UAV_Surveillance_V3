@@ -107,6 +107,11 @@ PATROL_LOCATIONS = 10  # Number of locations to sample and compare
 
 K_CONSTANT = 39_633
 
+# ---- Submarine Constants ----
+TUBE_RELOAD_TIME = 0.25
+NUM_MISSILES_TO_LAUNCH = 4
+CHANCE_OF_MISSILE_HIT = 0.7
+
 # ---- Vessel Constants ----
 
 MERCHANT_HEALTH = 100
@@ -136,6 +141,8 @@ CRUISING_SPEED = 12 * 1.852
 
 ESCORT_MAINTENANCE_TIME = 6  # Time for escorts to refuel/resupply
 MERCHANT_MAINTENANCE_TIME = 3 * 24  # Time for merchants to return overseas
+
+CHINESE_BOARDING_DESTINATION = None
 
 # ---- Plotting Constants -----
 WORLD_MARKER_SIZE = 7

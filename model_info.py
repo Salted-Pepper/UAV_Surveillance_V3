@@ -54,6 +54,377 @@ SHIP_MODELS = [{"name": "Zhaotou",
                 "endurance": 12300
                 },
 
+               {"name": "Type 053",
+                "#_available": 3,
+                "length": 367,
+                "displacement": 2000,
+                "armed": True,
+                "max_speed": 24,
+                "helicopter": False,
+                "endurance": 8500
+                },
+
+               {"name": "Zhaochang",
+                "#_available": 1,
+                "length": 360,
+                "displacement": 3500,
+                "armed": True,
+                "max_speed": 24,
+                "helicopter": False,
+                "endurance": 10700
+                },
+
+               {"name": "Zhaoyu",
+                "#_available": 1,
+                "length": 360,
+                "displacement": 3500,
+                "armed": True,
+                "max_speed": 24,
+                "helicopter": False,
+                "endurance": 10700
+                },
+
+               {"name": "Hai Yang",
+                "#_available": 1,
+                "length": 345,
+                "displacement": 3325,
+                "armed": False,
+                "max_speed": 24,
+                "helicopter": False,
+                "endurance": 10300
+                },
+
+               {"name": "Zhaojun",
+                "#_available": 9,
+                "length": 328,
+                "displacement": 2700,
+                "armed": True,
+                "max_speed": 24,
+                "helicopter": False,
+                "endurance": 9300
+                },
+
+               {"name": "Zhaolai",
+                "#_available": 4,
+                "length": 325,
+                "displacement": 4800,
+                "armed": False,
+                "max_speed": 28,
+                "helicopter": False,
+                "endurance": 12500
+                },
+
+               {"name": "Shucha II",
+                "#_available": 10,
+                "length": 321,
+                "displacement": 4000,
+                "armed": True,
+                "max_speed": 28,
+                "helicopter": False,
+                "endurance": 11200
+                },
+
+               {"name": "Haixun II",
+                "#_available": 1,
+                "length": 311,
+                "displacement": 1900,
+                "armed": True,
+                "max_speed": 20,
+                "helicopter": False,
+                "endurance": 7900
+                },
+
+               {"name": "Zhaogao",
+                "#_available": 3,
+                "length": 308,
+                "displacement": 1750,
+                "armed": True,
+                "max_speed": 20,
+                "helicopter": False,
+                "endurance": 7600
+                },
+
+               {"name": "Jiangdao",
+                "#_available": 22,
+                "length": 300,
+                "displacement": 1500,
+                "armed": True,
+                "max_speed": 25,
+                "helicopter": False,
+                "endurance": 3500
+                },
+
+               {"name": "Shusheng",
+                "#_available": 5,
+                "length": 290,
+                "displacement": 1750,
+                "armed": False,
+                "max_speed": 20,
+                "helicopter": False,
+                "endurance": 7500
+                },
+
+               {"name": "Shuwu",
+                "#_available": 3,
+                "length": 288,
+                "displacement": 1750,
+                "armed": False,
+                "max_speed": 20,
+                "helicopter": False,
+                "endurance": 7500
+                },
+
+               {"name": "Zhaotim",
+                "#_available": 15,
+                "length": 269,
+                "displacement": 1765,
+                "armed": True,
+                "max_speed": 20,
+                "helicopter": False,
+                "endurance": 7400
+                },
+
+               {"name": "Tuzhong",
+                "#_available": 3,
+                "length": 278,
+                "displacement": 3300,
+                "armed": False,
+                "max_speed": 16,
+                "helicopter": False,
+                "endurance": 9800
+                },
+
+               {"name": "Shuke",
+                "#_available": 3,
+                "length": 242,
+                "displacement": 1450,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 6800
+                },
+
+               {"name": "Shuyou",
+                "#_available": 3,
+                "length": 242,
+                "displacement": 1000,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 6000
+                },
+
+               {"name": "Haijian",
+                "#_available": 4,
+                "length": 230,
+                "displacement": 1350,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 6400
+                },
+
+               {"name": "Hutao",
+                "#_available": 9,
+                "length": 223,
+                "displacement": 625,
+                "armed": True,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 5300
+                },
+
+               {"name": "Shuzao",
+                "#_available": 15,
+                "length": 215,
+                "displacement": 600,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 5200
+                },
+
+               {"name": "Haihei",
+                "#_available": 2,
+                "length": 205,
+                "displacement": 450,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 4900
+                },
+
+               {"name": "Type 618",
+                "#_available": 30,
+                "length": 201,
+                "displacement": 650,
+                "armed": True,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 5100
+                },
+
+               {"name": "Sansha",
+                "#_available": 82,
+                "length": 196,
+                "displacement": 650,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 5000
+                },
+
+               {"name": "Zongwen",
+                "#_available": 1,
+                "length": 195,
+                "displacement": 850,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 5400
+                },
+
+               {"name": "Zhongem",
+                "#_available": 2,
+                "length": 190,
+                "displacement": 550,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 4900
+                },
+
+               {"name": "Haifeng",
+                "#_available": 5,
+                "length": 190,
+                "displacement": 440,
+                "armed": True,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 4700
+                },
+
+               {"name": "non-Spratlys",
+                "#_available": 157,
+                "length": 184,
+                "displacement": 440,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 4800
+                },
+
+               {"name": "Spratlys",
+                "#_available": 234,
+                "length": 184,
+                "displacement": 500,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 4800
+                },
+
+               {"name": "Zhongeng",
+                "#_available": 10,
+                "length": 180,
+                "displacement": 1000,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 5500
+                },
+
+               {"name": "Zhongke",
+                "#_available": 6,
+                "length": 180,
+                "displacement": 500,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 4800
+                },
+
+               {"name": "Shuoshi",
+                "#_available": 1,
+                "length": 425,
+                "displacement": 5800,
+                "armed": False,
+                "max_speed": 20,
+                "helicopter": True,
+                "endurance": 14800
+                },
+
+               {"name": "Subian",
+                "#_available": 2,
+                "length": 370,
+                "displacement": 4500,
+                "armed": False,
+                "max_speed": 20,
+                "helicopter": True,
+                "endurance": 12000
+                },
+
+               {"name": "Haixun I",
+                "#_available": 1,
+                "length": 310,
+                "displacement": 1900,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": True,
+                "endurance": 7900
+                },
+
+               {"name": "Shuling",
+                "#_available": 1,
+                "length": 290,
+                "displacement": 1500,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": True,
+                "endurance":7500
+                },
+
+               {"name": "Type 630",
+                "#_available": 15,
+                "length": 211,
+                "displacement": 600,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 5200
+                },
+
+               {"name": "Shuzao I",
+                "#_available": 6,
+                "length": 201,
+                "displacement": 600,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 5200
+                },
+
+               {"name": "Shugong",
+                "#_available": 1,
+                "length": 185,
+                "displacement": 525,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 4900
+                },
+
+               {"name": "Shudi",
+                "#_available": 2,
+                "length": 182,
+                "displacement": 525,
+                "armed": False,
+                "max_speed": 18,
+                "helicopter": False,
+                "endurance": 4800
+                },
+
+
                ]
 
 UAV_MODELS = [{"name": "WLI_GJI",

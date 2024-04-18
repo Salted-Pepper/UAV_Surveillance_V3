@@ -66,6 +66,7 @@ class Agent:
         self.direction = "north"  # Direction facing when patrolling to make subsequent moves
 
         # AGENT INTERACTIONS
+        self.is_boarding = False
         self.engaged_in_combat = False
         self.trailing = False
         self.located_agent = None
@@ -129,7 +130,6 @@ class Agent:
                     return False
 
         raise NotImplementedError(f"Zone {name} does not exist in {constants.world.zones}")
-
 
     def update_trail_route(self) -> None:
         """
@@ -510,7 +510,7 @@ class Agent:
 
     def spread_pheromones(self):
         """
-        Make the agent spread pheromones in their area
+        Make the agent spread pheromones surrounding their area
         :return:
         """
         locations = []

@@ -28,7 +28,6 @@ class OTH:
         self.rev_sin = math.sin(math.radians(-self.angle / 2))
 
         self.color = "black"
-        self.active = False
 
         # Scanning parameters
         self.range_band = 30
@@ -61,21 +60,10 @@ class OTH:
         Perform all the actions for the OTH for each turn
         :return:
         """
-        # First check if OTH should be active
-        if round(constants.world.time_of_day, 3) == 7:
-            self.roll_if_active(time="AM")
-
-        elif round(constants.world.time_of_day, 3) == 19:
-            self.roll_if_active(time="PM")
-
-        else:
-            pass
-
-        # then if active, take the next step of the range scan
-        if self.active:
-            self.check_scan_area()
-            self.call_actions()
-            self.update_range_band_plot()
+        # Take the next step of the range scan
+        self.check_scan_area()
+        self.call_actions()
+        self.update_range_band_plot()
 
     @staticmethod
     def detected_agent(agent) -> bool:
@@ -103,11 +91,14 @@ class OTH:
     def call_actions(self):
         """
         Queues actions for located agents.
+        Tasks are in the format of a dict
         :return:
         """
         tasks_to_remove = []
         for task in self.action_queue:
-            action, agent_location, time = task
+            action = task['action']
+            agent_location = task['location']
+            time = task['time']
             if action == "call UAV":
                 successful = constants.world.UAV_manager.send_patrol_to_location(agent_location)
 
@@ -120,9 +111,9 @@ class OTH:
             self.action_queue.remove(task)
 
         for agent in self.located_agents:
-            self.action_queue.append(["call UAV",
-                                      copy.deepcopy(agent.location),
-                                      constants.world.world_time + constants.COMMUNICATION_DELAY])
+            self.action_queue.append({'action': "call UAV",
+                                      'location': copy.deepcopy(agent.location),
+                                      'time': constants.world.world_time + constants.COMMUNICATION_DELAY})
         self.located_agents = []
 
     def check_scan_area(self) -> None:
@@ -192,34 +183,6 @@ class OTH:
 
         return Polygon(points=[low_min, dir_point_min, high_min, high_max, dir_point_max, low_max],
                        color="salmon")
-
-    def roll_if_active(self, time: str) -> None:
-        """
-        Check if the OTH is active or not for the upcoming 12h block.
-        Checks are done at 7am and 7pm world time.
-
-        At 7am, 5% that conditions are too bad - no checks
-        At 7pm, 50% chance that no OTH checks are made
-        :param time: String either 'AM' or 'PM'
-        :return:
-        """
-        random_value = random.uniform(0, 1)
-
-        if time == "AM":
-            if random_value <= 0.05:
-                self.active = False
-            else:
-                self.active = True
-        elif time == "PM":
-            if random_value <= 0.5:
-                self.active = False
-            else:
-                self.active = True
-        else:
-            raise NotImplementedError(f"Time {time} not implemented.")
-
-        if not self.active:
-            self.remove_range_band_from_plot()
 
     def add_to_plot(self):
         """
